@@ -255,7 +255,7 @@ class TestManageCLI(unittest.TestCase):
     def test_config_path_honors_state_dir_and_diagnose_prompt(self) -> None:
         old_cfg = os.environ.pop("UNARMORED_CONFIG", None)
         try:
-            self.assertEqual(manage.config_file_path(), (self.state_dir / "config.json").resolve())
+            self.assertEqual(manage.config_file_path().resolve(), (self.state_dir / "config.json").resolve())
             self.assertEqual(manage.main(["configure", "--tone", "calm"]), 0)
             self.assertTrue((self.state_dir / "config.json").is_file())
         finally:

@@ -124,10 +124,10 @@ class TestBuildRelease(unittest.TestCase):
             with self.assertRaises(build_release.ReleaseValidationError):
                 build_release.validate_repo(copy_root)
 
-            # Verify .jsonl files are LF-normalized on export
+            # Verify .jsonl files are LF-normalized on export (even when checked out with CRLF on Windows)
             shutil.copy2(REPO_ROOT / "plugin.json", pj)
             prompts = copy_root / "eval/prompts.jsonl"
-            prompts.write_bytes(prompts.read_bytes().replace(b"\n", b"\r\n"))
+            prompts.write_bytes(prompts.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
             dest = Path(tmp) / "lf_export"
             build_release.export_source_tree(copy_root, dest)
             self.assertNotIn(b"\r\n", (dest / "eval/prompts.jsonl").read_bytes())
