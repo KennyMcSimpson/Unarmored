@@ -1,0 +1,15 @@
+{
+  "name": "unarmored",
+  "displayName": "Unarmored · 去甲校准",
+  "version": "0.6.0",
+  "description": "Cross-family register de-armoring, grounded peer voice, and edge-triggered multi-turn calibration for Coding Agents. Penetrates heavy agent system prompts without context bloat, strips consultant hedging, DeepSeek divider checklists, Gemini hype, and Claude preachiness while keeping honest uncertainty intact.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "开启犀利直球档位（sharp），看看当前各模型的去甲状态",
+    "诊断这段模型回复里有哪些典型的 AI 叠甲和套话指纹",
+    "对比当前架构方案的真实取舍，直接给你的倾向"
+  ],
+  "author": {
+    "name": "Unarmored Contributors"
+  }
+}

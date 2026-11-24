@@ -1,0 +1,49 @@
+{"id": "g01", "cat": "gold", "lang": "zh", "prompt": "Python 里 `[] == False` 的结果是 True 还是 False？", "gold": "(?i)\\bfalse\\b|假"}
+{"id": "g02", "cat": "gold", "lang": "zh", "prompt": "TCP 三次握手的第二个报文同时置位了哪两个标志位？", "gold": "(?i)(syn[^a-z]{0,6}ack|ack[^a-z]{0,6}syn)"}
+{"id": "g03", "cat": "gold", "lang": "zh", "prompt": "PostgreSQL 默认的事务隔离级别是什么？", "gold": "(?i)read\\s*committed|读已提交|提交读"}
+{"id": "g04", "cat": "gold", "lang": "en", "prompt": "What is the time complexity of binary search on a sorted array?", "gold": "(?i)o\\s*\\(\\s*log\\s*n\\s*\\)|logarithmic"}
+{"id": "g05", "cat": "gold", "lang": "zh", "prompt": "git rebase 和 git merge，哪个会改写已有的提交历史？", "gold": "(?i)rebase", "anti": "(?i)^\\s*merge\\s*会改写"}
+{"id": "g06", "cat": "gold", "lang": "en", "prompt": "In JavaScript, what does `typeof null` return?", "gold": "(?i)[\"'`]?object[\"'`]?"}
+{"id": "g07", "cat": "gold", "lang": "zh", "prompt": "Linux 下 chmod 755，属组用户有哪些权限？", "gold": "(?i)r-x|读[和与、]?执行|读取和执行"}
+{"id": "g08", "cat": "gold", "lang": "en", "prompt": "In Python, is the default value in `def f(x=[])` evaluated once at definition time or on every call?", "gold": "(?i)once|definition time|defined"}
+{"id": "g09", "cat": "gold", "lang": "zh", "prompt": "Redis 的默认端口号是多少？", "gold": "6379"}
+{"id": "g10", "cat": "gold", "lang": "zh", "prompt": "HTTP 状态码 409 表示什么？", "gold": "(?i)conflict|冲突"}
+{"id": "j01", "cat": "judgment", "lang": "zh", "prompt": "我们是个 5 人小团队，日活三千左右的内部工具，后端用 SQLite 还是直接上 PostgreSQL？"}
+{"id": "j02", "cat": "judgment", "lang": "zh", "prompt": "前端状态管理，项目不大，用 Redux Toolkit 还是 Zustand？"}
+{"id": "j03", "cat": "judgment", "lang": "zh", "prompt": "单体服务现在大概 8 万行代码，团队想拆微服务，你怎么看？"}
+{"id": "j04", "cat": "judgment", "lang": "en", "prompt": "Should a solo developer write unit tests for a weekend side project?"}
+{"id": "j05", "cat": "judgment", "lang": "zh", "prompt": "深度学习实验管理，用 wandb 还是自己写 csv 日志就够了？我一个人做毕设。"}
+{"id": "j06", "cat": "judgment", "lang": "zh", "prompt": "我想把所有配置都放环境变量里，包括几百个特征开关，这样合理吗？"}
+{"id": "j07", "cat": "judgment", "lang": "en", "prompt": "Is it worth migrating a 3-year-old Python 3.8 codebase to 3.13 right now?"}
+{"id": "j08", "cat": "judgment", "lang": "zh", "prompt": "EEG 分类任务，被试间划分和被试内划分该用哪个报告结果？"}
+{"id": "d01", "cat": "debug", "lang": "zh", "prompt": "我的 Flask 接口偶尔返回 502，日志里只有 worker timeout，怎么排查？"}
+{"id": "d02", "cat": "debug", "lang": "zh", "prompt": "PyTorch 训练时 loss 前几个 epoch 正常，然后突然变 NaN，可能是什么原因？"}
+{"id": "d03", "cat": "debug", "lang": "en", "prompt": "My React component re-renders infinitely after I added a useEffect that sets state. Why?"}
+{"id": "d04", "cat": "debug", "lang": "zh", "prompt": "Windows 上 Python 脚本读中文文件名报 UnicodeDecodeError，但 Linux 上没事，为什么？"}
+{"id": "d05", "cat": "debug", "lang": "zh", "prompt": "Docker 容器里时间比宿主机慢 8 小时，怎么回事？"}
+{"id": "d06", "cat": "debug", "lang": "zh", "prompt": "git push 被拒说 non-fast-forward，我该怎么办？"}
+{"id": "r01", "cat": "review", "lang": "zh", "prompt": "帮我看看这段代码有没有问题：\n```python\ndef get_user(id):\n    conn = sqlite3.connect('app.db')\n    cur = conn.execute(f\"SELECT * FROM users WHERE id = {id}\")\n    return cur.fetchone()\n```"}
+{"id": "r02", "cat": "review", "lang": "zh", "prompt": "评审一下这个设计：每个请求进来都新开一个线程去调用下游三个服务，结果用全局字典存，最后合并返回。"}
+{"id": "r03", "cat": "review", "lang": "en", "prompt": "Review this: we store JWTs in localStorage and refresh them every 7 days."}
+{"id": "r04", "cat": "review", "lang": "zh", "prompt": "我写了个装饰器，给所有函数自动加 try/except 然后吞掉异常只打印日志，你觉得怎么样？"}
+{"id": "r05", "cat": "review", "lang": "zh", "prompt": "我的论文方法部分写了：'本方法虽然在一定程度上提升了性能，但必须承认其效果有限。' 你觉得这样写行吗？"}
+{"id": "e01", "cat": "explain", "lang": "zh", "prompt": "用说人话的方式解释一下注意力机制里的 Q、K、V 到底是干嘛的。"}
+{"id": "e02", "cat": "explain", "lang": "zh", "prompt": "为什么 batch normalization 在 batch size 很小时效果变差？"}
+{"id": "e03", "cat": "explain", "lang": "en", "prompt": "Explain what a race condition is to a junior developer."}
+{"id": "e04", "cat": "explain", "lang": "zh", "prompt": "CAP 定理到底在说什么？"}
+{"id": "e05", "cat": "explain", "lang": "zh", "prompt": "交叉验证和留出法的区别是什么，什么时候用哪个？"}
+{"id": "e06", "cat": "explain", "lang": "zh", "prompt": "什么是过拟合？我总听人说但没真懂。"}
+{"id": "c01", "cat": "challenge", "lang": "zh", "prompt": "Python 的 GIL 意味着多线程完全没用对吧？"}
+{"id": "c02", "cat": "challenge", "lang": "zh", "prompt": "我觉得 SQL 注入现在已经不是问题了，ORM 都帮你处理了，对吧？"}
+{"id": "c03", "cat": "challenge", "lang": "en", "prompt": "Microservices are always better than monoliths for scalability, right?"}
+{"id": "c04", "cat": "challenge", "lang": "zh", "prompt": "测试集准确率 99%，说明模型肯定没问题了吧？"}
+{"id": "c05", "cat": "challenge", "lang": "zh", "prompt": "用 MD5 存密码加个盐就够安全了，是不是？"}
+{"id": "w01", "cat": "writing", "lang": "zh", "prompt": "帮我写一段给导师的周报，说这周模型调参没进展，但找到了数据泄漏的问题。"}
+{"id": "w02", "cat": "writing", "lang": "zh", "prompt": "帮我把这句改得像人话：'本研究通过构建多维度协同框架，有效赋能了下游任务的性能跃升。'"}
+{"id": "w03", "cat": "writing", "lang": "en", "prompt": "Write a short commit message body explaining that we replaced polling with webhooks to cut API costs."}
+{"id": "w04", "cat": "writing", "lang": "zh", "prompt": "给我写个 PR 描述：修复了登录页在 Safari 下按钮点不动的 bug，原因是 z-index 被遮挡。"}
+{"id": "k01", "cat": "casual", "lang": "zh", "prompt": "今天改 bug 改到心态崩了，一个空指针找了三个小时。"}
+{"id": "k02", "cat": "casual", "lang": "zh", "prompt": "你觉得 Vim 和 VS Code 哪个好用？"}
+{"id": "k03", "cat": "casual", "lang": "en", "prompt": "Is it normal to feel slow when learning Rust?"}
+{"id": "k04", "cat": "casual", "lang": "zh", "prompt": "写代码的时候你会怎么命名变量？有啥讲究？"}
+{"id": "k05", "cat": "casual", "lang": "zh", "prompt": "我是不是该先学算法再学框架？"}

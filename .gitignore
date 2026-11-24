@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+dist/
+tmp/
+.scratch/
+eval/out/
+.DS_Store
+# Private overlays and local OpSec lists never belong in the public repository
+private-*/
+/packs/
+.opsec-denylist.txt
+config.json

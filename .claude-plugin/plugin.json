@@ -1,0 +1,33 @@
+{
+  "name": "unarmored",
+  "version": "0.6.0",
+  "description": "Cross-family register-shift de-armoring, grounded peer voice, and edge-triggered multi-turn calibration for Coding Agents.",
+  "author": {
+    "name": "Unarmored Contributors"
+  },
+  "license": "Apache-2.0",
+  "hooks": {
+    "PostModelSwitch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "S=\"${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-.}}/scripts/unarmored_hook.py\"; set -f; IFS=:; for D in $PATH; do case \"$D\" in *WindowsApps*|*windowsapps*) continue;; esac; for B in python3 python python.exe; do if [ -x \"$D/$B\" ] && [ -s \"$D/$B\" ]; then unset IFS; exec \"$D/$B\" -E -S \"$S\"; fi; done; done; unset IFS; exec python3 -E -S \"$S\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "S=\"${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-.}}/scripts/unarmored_hook.py\"; set -f; IFS=:; for D in $PATH; do case \"$D\" in *WindowsApps*|*windowsapps*) continue;; esac; for B in python3 python python.exe; do if [ -x \"$D/$B\" ] && [ -s \"$D/$B\" ]; then unset IFS; exec \"$D/$B\" -E -S \"$S\"; fi; done; done; unset IFS; exec python3 -E -S \"$S\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

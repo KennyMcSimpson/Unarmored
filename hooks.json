@@ -1,0 +1,26 @@
+{
+  "unarmored-calibration": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "python3 -E -S scripts/unarmored_hook.py",
+        "timeout": 10
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python3 -E -S scripts/unarmored_hook.py",
+        "timeout": 10
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python3 -E -S scripts/unarmored_hook.py",
+        "timeout": 10
+      }
+    ]
+  }
+}

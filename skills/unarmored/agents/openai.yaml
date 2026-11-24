@@ -1,0 +1,4 @@
+interface:
+  display_name: "Unarmored"
+  short_description: "按模型靶向祛除叠甲、浮夸、说教与偷懒，恢复熟人同僚语态"
+  default_prompt: "检查当前 Unarmored 去甲校准配置或切换语态档位。"

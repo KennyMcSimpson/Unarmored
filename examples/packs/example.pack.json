@@ -1,0 +1,47 @@
+{
+  "schema": "unarmored-pack/1",
+  "name": "example-team",
+  "defaults": {
+    "tone": "peer",
+    "language": "auto"
+  },
+  "model_strip_patterns": [
+    "^my-gateway[-_/:]+",
+    "\\[1m\\]$"
+  ],
+  "model_aliases": {
+    "house-coder": "gpt",
+    "house-reviewer": "claude"
+  },
+  "bypass": {
+    "session_patterns": ["nightly-report"],
+    "prompt_markers": ["[no-calibration]"],
+    "system_markers": ["[raw-eval-harness]"]
+  },
+  "roles": [
+    {
+      "id": "reviewer",
+      "policy": "adversarial",
+      "match": { "agent_types": ["code-reviewer"] }
+    },
+    {
+      "id": "worker",
+      "policy": "terse",
+      "match": { "agent_types": ["worker", "explorer"] }
+    },
+    {
+      "id": "batch-jobs",
+      "policy": "skip",
+      "match": { "session_patterns": ["batch-"] }
+    }
+  ],
+  "voice": {
+    "zh": "讲清楚具体是什么、为什么会这样、判断标准是什么；术语照用，公式和定义直接写。",
+    "en": "Say what the thing concretely is, why it happens, and what the judgment criterion is; use real terms, write formulas and definitions directly."
+  },
+  "directives": {
+    "gpt": {
+      "en": "[Register:GPT] Skip generic disclaimers and cautious-consultant balance hedging; state concrete risks, unverified gaps, and decision-flipping thresholds plainly inline, then stop dead."
+    }
+  }
+}

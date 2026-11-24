@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <!-- 12.5% outer margin (16px..112px) for clean rendering on light and dark themes -->
+  <rect x="18" y="18" width="92" height="92" rx="22" fill="#111827" stroke="#64748B" stroke-width="3"/>
+  <!-- Split armor plates opening outward to reveal a clean calibration core -->
+  <path d="M54 34L36 44V65C36 79 44 90 54 95" stroke="#94A3B8" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M74 34L92 44V65C92 79 84 90 74 95" stroke="#94A3B8" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Sharp central calibration pulse / scalpel line -->
+  <path d="M64 28V100" stroke="#38BDF8" stroke-width="5.5" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="8" fill="#F8FAFC" stroke="#38BDF8" stroke-width="3.5"/>
+</svg>
