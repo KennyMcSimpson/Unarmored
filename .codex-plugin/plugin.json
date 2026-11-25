@@ -8,7 +8,7 @@
     "com.openai": {
       "interface": {
         "displayName": "Unarmored",
-        "shortDescription": "按模型靶向消除叠甲、浮夸、说教与偷懒",
+        "shortDescription": "Targeted per-model removal of hedging, hype, lecturing, and code elision",
         "category": "Productivity",
         "logo": "./assets/logo.svg",
         "composerIcon": "./assets/logo.svg"

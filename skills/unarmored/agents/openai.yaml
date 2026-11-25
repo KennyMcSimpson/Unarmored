@@ -1,4 +1,4 @@
 interface:
   display_name: "Unarmored"
-  short_description: "按模型靶向祛除叠甲、浮夸、说教与偷懒，恢复熟人同僚语态"
-  default_prompt: "检查当前 Unarmored 去甲校准配置或切换语态档位。"
+  short_description: "Targeted per-model removal of hedging, hype, lecturing, and code elision for a grounded peer voice"
+  default_prompt: "Inspect the current Unarmored calibration status or switch the active tone stance."

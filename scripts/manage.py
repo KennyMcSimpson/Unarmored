@@ -30,7 +30,6 @@ BUNDLE_FILES = [
     "LICENSE",
     "plugin.json",
     "README.md",
-    "README_en.md",
     "assets/logo.svg",
     "rules/AGENTS.md",
     "scripts/unarmored_hook.py",

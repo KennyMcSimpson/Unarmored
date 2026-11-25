@@ -216,7 +216,7 @@ class TestHookEngine(unittest.TestCase):
         msg_debug = out_debug["injectSteps"][0]["systemMessage"]["systemMessage"]
         self.assertIn("Debug Recovery", msg_debug)
 
-        # Turn 2: User explicitly switches back to discussion ("先别改代码，只讨论") -> MUST override stale DEBUG_RECOVERY
+        # Turn 2: User explicitly switches back to discussion (no-edit ZH prompt) -> MUST override stale DEBUG_RECOVERY
         out_spar = unarmored_hook.process_event(
             {
                 "hookEventName": "PreInvocation",
@@ -772,7 +772,7 @@ class TestHookEngine(unittest.TestCase):
         dash_spam = "一——二——三——四——五——六——七。"
         self.assertIn("gpt_slop_lexicon", unarmored_hook.analyze_response_smells(dash_spam)["smells"])
 
-        # 4. Verdict-aware fence_sitting: clear pick + two honest "取决于" thresholds is NOT fence-sitting
+        # 4. Verdict-aware fence_sitting: clear pick + two honest conditional thresholds is NOT fence-sitting
         honest = "选 SQLite。以后要不要换 PG 取决于写并发，什么时候拆服务取决于团队规模。"
         self.assertNotIn("fence_sitting", unarmored_hook.analyze_response_smells(honest)["smells"])
         for wishy in (
@@ -818,7 +818,7 @@ class TestHookEngine(unittest.TestCase):
         self.cfg_path.write_text(json.dumps({"tone": "unknown-tone"}), encoding="utf-8")
         self.assertEqual(unarmored_hook.load_config()["tone"], "peer")
 
-        # DeepSeek chat turn on Claude/Codex hook receives [DS直出提醒]; exec turn does NOT
+        # DeepSeek chat turn on Claude/Codex hook receives the DS direct wire anchor; exec turn does NOT
         ds_base = {"hook_event_name": "UserPromptSubmit", "session_id": "ds-s1", "turn_id": "t1", "model": "deepseek-r1"}
         out_chat = self._ctx(unarmored_hook.process_event({**ds_base, "prompt": "用说人话的方式解释一下 QKV 到底是干嘛的"}))
         self.assertIn("[当前意图：讲透原理]", out_chat)
@@ -909,7 +909,7 @@ class TestHookEngine(unittest.TestCase):
         self.assertFalse(unarmored_hook.allows_disk_edits("先别急着改文件，给我出个修改 auth.py 的方案", "SURGICAL_EXEC"))
         self.assertTrue(unarmored_hook.allows_disk_edits("修改 auth.py 加上超时重试", "SURGICAL_EXEC"))
 
-        # Bare "好" inside EMPATHY_VENT must NOT switch to SURGICAL_EXEC; explicit "动手吧" DOES
+        # Bare acknowledgement inside EMPATHY_VENT must NOT switch to SURGICAL_EXEC; explicit go-ahead DOES
         self.assertEqual(unarmored_hook.classify_intent("好", prev_mode="EMPATHY_VENT"), "EMPATHY_VENT")
         self.assertEqual(unarmored_hook.classify_intent("动手吧", prev_mode="EMPATHY_VENT"), "SURGICAL_EXEC")
         self.assertEqual(unarmored_hook.classify_intent("好", prev_mode="PEER_SPAR"), "SURGICAL_EXEC")
@@ -919,9 +919,9 @@ class TestHookEngine(unittest.TestCase):
         self.assertTrue(unarmored_hook.is_epistemic_challenge("上了 HTTPS 就不用做鉴权了吧？"))
 
     def test_turn1_wire_anchor_edge_trigger_antigravity_zh_mirror_and_sticky_bypass(self) -> None:
-        # 1. Claude/Codex GPT: SessionStart initializes system baseline; Turn 1 emits compact [直出·GPT] wire anchor;
+        # 1. Claude/Codex GPT: SessionStart initializes system baseline; Turn 1 emits compact GPT wire anchor;
         #    Turn 2 steady-state PEER_SPAR emits {} (zero bloat); Turn 3 mode change emits new mode;
-        #    Turn 5 in SURGICAL_EXEC suppresses [语域保鲜], whereas chat Turn 5/10 rotates refresh variants.
+        #    Turn 5 in SURGICAL_EXEC suppresses the refresh pulse, whereas chat Turn 5/10 rotates refresh variants.
         sid = "gpt-edge-1"
         ss = unarmored_hook.process_event(
             {"hook_event_name": "SessionStart", "session_id": sid, "turn_id": "t0", "model": "gpt-5.4"}
@@ -951,7 +951,7 @@ class TestHookEngine(unittest.TestCase):
         )
         self.assertIn("[当前意图：动手]", self._ctx(t4))
 
-        # Turn 5 in SURGICAL_EXEC must NOT emit [语域保鲜]
+        # Turn 5 in SURGICAL_EXEC must NOT emit the long-session refresh pulse
         t5_exec = unarmored_hook.process_event(
             {"hook_event_name": "UserPromptSubmit", "session_id": sid, "turn_id": "t5", "model": "gpt-5.4", "prompt": "把 retry.py 的重试次数改成 3"}
         )
@@ -1063,7 +1063,7 @@ class TestHookEngine(unittest.TestCase):
         )
         self.assertEqual(plan_res, {})
 
-        # 2. EXPLAIN_DEEP illustrative snippet with `...` MUST NOT be blocked by [完备门禁]
+        # 2. EXPLAIN_DEEP illustrative snippet with `...` MUST NOT be blocked by the completeness gate
         exp_t = Path(self.tmp.name) / ".claude" / "exp_stop.jsonl"
         unarmored_hook.process_event(
             {"hook_event_name": "UserPromptSubmit", "session_id": "exp-s1", "transcript_path": str(exp_t), "prompt": "解释一下 async/await 原理"}
@@ -1079,7 +1079,7 @@ class TestHookEngine(unittest.TestCase):
         )
         self.assertEqual(exp_res, {})
 
-        # 3. User said "先别急着改文件，给我出个修改 auth.py 的方案" -> Stop MUST allow
+        # 3. User explicitly requested a plan-only response without editing auth.py -> Stop MUST allow
         noedit_t = Path(self.tmp.name) / ".claude" / "noedit_stop.jsonl"
         unarmored_hook.process_event(
             {
@@ -1100,7 +1100,7 @@ class TestHookEngine(unittest.TestCase):
         )
         self.assertEqual(noedit_res, {})
 
-        # 4. SURGICAL_EXEC after calling Read ONLY (0 edit/exec calls) and stopping on a plan -> [执行门禁] MUST block!
+        # 4. SURGICAL_EXEC after calling Read ONLY (0 edit/exec calls) and stopping on a plan -> execution gate MUST block!
         read_t = Path(self.tmp.name) / ".claude" / "readonly_plan.jsonl"
         unarmored_hook.process_event(
             {
@@ -1233,13 +1233,13 @@ class TestHookEngine(unittest.TestCase):
             )
             self.assertEqual(stop_out.get("decision"), "block", f"Stop gate died on repeated prompt turn {turn_idx}")
 
-        # Repeated challenge prompt triggers [独立核验] on Turn 2 as well
+        # Repeated challenge prompt triggers the epistemic verification directive on Turn 2 as well
         c1 = self._ctx(unarmored_hook.process_event({"hook_event_name": "UserPromptSubmit", "session_id": "rep-chal", "prompt": "你确定吗？"}))
         c2 = self._ctx(unarmored_hook.process_event({"hook_event_name": "UserPromptSubmit", "session_id": "rep-chal", "prompt": "你确定吗？"}))
         self.assertIn("[独立核验]", c1)
         self.assertIn("[独立核验]", c2)
 
-        # Antigravity invocationNum=1 with identical prompt "继续" resets turn_stop_count (whereas invocationNum=2 stays hot-path {})
+        # Antigravity invocationNum=1 with an identical repeated prompt resets turn_stop_count (whereas invocationNum=2 stays hot-path {})
         agy_t = Path(self.tmp.name) / "agy_repeat.jsonl"
         unarmored_hook.process_event(
             {"hookEventName": "PreInvocation", "conversationId": "agy-rep", "modelName": "GPT-5", "transcriptPath": str(agy_t), "lastUserInput": "修改 auth.py", "invocationNum": 1}
@@ -1250,7 +1250,7 @@ class TestHookEngine(unittest.TestCase):
             )["decision"],
             "continue",
         )
-        # Same text "修改 auth.py" on NEW user turn (invocationNum=1) resets turn_stop_count -> Stop catches again
+        # Identical edit prompt on NEW user turn (invocationNum=1) resets turn_stop_count -> Stop catches again
         unarmored_hook.process_event(
             {"hookEventName": "PreInvocation", "conversationId": "agy-rep", "modelName": "GPT-5", "transcriptPath": str(agy_t), "lastUserInput": "修改 auth.py", "invocationNum": 1}
         )
@@ -1458,7 +1458,7 @@ class TestHookEngine(unittest.TestCase):
         )
 
         # 4. Destructive confirmation prompt with illustrative `...` MUST be allowed;
-        #    conversely, business noun '登录态' and closing offer '需要我帮你写入 auth.py 吗？' MUST NOT bypass gates!
+        #    conversely, business noun 'login state' (ZH) and closing offer 'want me to write auth.py?' (ZH) MUST NOT bypass gates!
         t4 = Path(self.tmp.name) / ".claude" / "h4_confirm.jsonl"
         unarmored_hook.process_event({"hook_event_name": "UserPromptSubmit", "session_id": "h4-4", "transcript_path": str(t4), "prompt": "修改 migrate.js 删除旧表"})
         confirm_res = unarmored_hook.process_event(

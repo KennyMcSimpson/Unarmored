@@ -1177,7 +1177,7 @@ def _get_compiled_patterns() -> dict:
             re.IGNORECASE,
         ),
         # Epistemic honesty marker: explicit speaker disclosure of unverified/unrun claims
-        # (exempts soft caveats like '仅供参考'/'值得注意的是', NEVER hard cliches like '总而言之'/'在当今快速演进')
+        # (exempts soft caveats like 'for reference only'/'it's worth noting' and ZH equivalents, NEVER hard wrap-up cliches)
         "epistemic_honesty": re.compile(
             r"(?:(?:我|这边|目前|这一步|本地|手头|现在|暂时|还)?没(?:有)?(?:机会|来得及|实际|真实|在[^，。\n]{1,12})?(?:实)?(?:跑(?:过)?(?!偏|掉|路)|测(?:过|试)|验证(?:过)?|执行(?:过)?|压测(?:过)?|上机)"
             r"|没法(?:实测|实际(?:跑|测|验证)|验证|运行)"
@@ -1494,13 +1494,13 @@ def classify_intent(raw_user_input: str, prev_mode: str = "PEER_SPAR") -> str:
         return "DEBUG_RECOVERY"
 
     # Explicit leading execution command targeting a real file wins over secondary explanatory/opinion clauses
-    # (e.g. "修改 auth.py 修复为什么超时...", "Update cache.py to explain what went wrong...")
+    # (e.g. "Update cache.py to explain what went wrong..." or its ZH equivalent)
     has_file_target = bool(pats["file_targets"].search(prose))
     if has_file_target and pats["leading_exec"].search(prose):
         return "SURGICAL_EXEC"
 
-    # Without traceback, explicit conceptual/how-to queries ("什么是死循环？", "Explain what a regression test is", "怎么杀掉卡死进程")
-    # must NOT be hijacked into DEBUG_RECOVERY by generic bug terms like 'regression'/'revert'/'stuck'/'卡死'.
+    # Without traceback, explicit conceptual/how-to queries (e.g. "What is an infinite loop?", "Explain what a regression test is", "How to kill a stuck process?")
+    # must NOT be hijacked into DEBUG_RECOVERY by generic bug terms like 'regression'/'revert'/'stuck'.
     if pats["concept_query_guard"].search(prose):
         if pats["explain_markers"].search(prose):
             return "EXPLAIN_DEEP"
@@ -1512,7 +1512,7 @@ def classify_intent(raw_user_input: str, prev_mode: str = "PEER_SPAR") -> str:
     if pats["frustration_bug"].search(prose):
         return "DEBUG_RECOVERY"
 
-    # Emotional / interpersonal venting (e.g. "心态崩了", "投了40份简历面试挂了") without file targets
+    # Emotional / interpersonal venting (e.g. burnout or job-search rejections) without file targets
     if pats["empathy_markers"].search(prose) and not has_file_target:
         return "EMPATHY_VENT"
 
@@ -1522,7 +1522,7 @@ def classify_intent(raw_user_input: str, prev_mode: str = "PEER_SPAR") -> str:
         if prev_mode == "PEER_SPAR" and pats["bare_go_ahead"].match(prose):
             return "SURGICAL_EXEC"
 
-    # Explicit explanation / opinion / critique prompts win over accidental backtick-term verbs (e.g. "`add` 和 `norm`")
+    # Explicit explanation / opinion / critique prompts win over accidental backtick-term verbs (e.g. "`add` and `norm`")
     if pats["explain_markers"].search(prose):
         return "EXPLAIN_DEEP"
     if pats["opinion_markers"].search(prose) and not pats["factual_binary_guard"].search(prose):
@@ -2193,7 +2193,7 @@ def evaluate_stop_gate(
         )
         return _emit_stop(host, True, reason)
 
-    # Trailing question exempts genuine clarification asks, but NOT closing waiter offers ("需要我帮你写入吗？") or unapplied code dumps
+    # Trailing question exempts genuine clarification asks, but NOT closing waiter offers ("Want me to write this for you?") or unapplied code dumps
     if (
         prose.rstrip().endswith(("?", "？"))
         and not ({"closing_offer", "gpt_closing_menu"} & smells)

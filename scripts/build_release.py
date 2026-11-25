@@ -59,7 +59,6 @@ PACKAGE_PATHS = [
     "skills/unarmored/references/model-profiles.md",
     "skills/unarmored/references/anti-slop-patterns.md",
     "README.md",
-    "README_en.md",
 ]
 
 # Extra files that belong in the public source tree (git-ready export) but not in the plugin archive
