@@ -857,28 +857,27 @@ def configure_runtime(args: argparse.Namespace) -> dict:
     return {"config_path": str(cfg_path), "config": current}
 
 
-def diagnose_text(args: argparse.Namespace) -> dict:
-    unarmored_hook = _load_hook_module()
-
-    if args.file:
-        try:
-            text = Path(args.file).read_bytes().decode("utf-8-sig")
-        except (OSError, UnicodeDecodeError) as exc:
-            raise ManageError(f"Failed to read --file {args.file}: {exc}") from exc
-    else:
-        text = args.text or ""
-    prompt_text = getattr(args, "prompt", None) or ""
-
-    cfg = unarmored_hook.load_config()
+def _diagnose_single_text(text: str, prompt_text: str, model_hint: str, cfg: dict, unarmored_hook) -> dict:
     unarmored_hook.set_active_strip_patterns(cfg.get("model_strip_patterns") or [])
-    fam = unarmored_hook.classify_model_family(args.model or "", cfg.get("model_aliases"))
+    fam = unarmored_hook.classify_model_family(model_hint or "", cfg.get("model_aliases"))
     cfg_lang = cfg.get("language", "auto")
     if cfg_lang in ("zh", "en"):
         lang = cfg_lang
     else:
         lang = unarmored_hook._infer_text_language(text) or unarmored_hook._infer_text_language(prompt_text) or "zh"
-    report = unarmored_hook.analyze_response_smells(text)
-    remedy = unarmored_hook.format_smell_remedy(report["smells"], lang) if report["score"] >= 2 else ""
+    mode = unarmored_hook.classify_intent(prompt_text) if prompt_text else ""
+    report = unarmored_hook.analyze_response_smells(text, mode=mode, tone=cfg.get("tone", "peer"))
+    overcorr_kind = str(report.get("overcorrection_kind") or "")
+    remedy = (
+        unarmored_hook.format_smell_remedy(report["smells"], lang, overcorrection_kind=overcorr_kind)
+        if report["score"] >= 2
+        else ""
+    )
+    stance = report.get("stance") or {}
+    spans = unarmored_hook.extract_smell_spans(text, report)
+    cur_tone = cfg.get("tone", "peer")
+    stepped = unarmored_hook._step_down_tone(cur_tone) if overcorr_kind else None
+    step_down = stepped if (stepped and stepped != cur_tone) else None
     out = {
         "model_family": fam,
         "detected_language": lang,
@@ -889,14 +888,145 @@ def diagnose_text(args: argparse.Namespace) -> dict:
         "wire_anchor": unarmored_hook.WIRE_ANCHORS[fam][lang],
         "remedy_directive": remedy,
         "packs_loaded": cfg.get("packs_loaded") or [],
+        "metrics": {
+            "sent_count": stance.get("sent_count", 0),
+            "sent_len_cv": stance.get("sent_len_cv"),
+            "short_punch_count": stance.get("short_punch_count", 0),
+            "opener_diversity": stance.get("opener_diversity"),
+            "transitions_per_k": stance.get("transitions_per_k", 0.0),
+            "attitude_per_k": stance.get("attitude_per_k", 0.0),
+            "spoken_pivot": stance.get("spoken_pivot", 0),
+            "self_mention_singular": stance.get("self_mention_singular", 0),
+            "overcorrection_kind": overcorr_kind,
+        },
+        "highlights": spans,
+        "soft_tone_step_down": step_down,
+        "_prose": report.get("prose", ""),
     }
     if prompt_text:
-        mode = unarmored_hook.classify_intent(prompt_text)
         out["classified_intent"] = mode
         out["allows_disk_edits"] = unarmored_hook.allows_disk_edits(prompt_text, mode)
         out["is_epistemic_challenge"] = unarmored_hook.is_epistemic_challenge(prompt_text)
         out["mode_directive"] = unarmored_hook.MODE_DIRECTIVES[mode][lang]
     return out
+
+
+def _read_diag_file(path_str: str, flag: str = "--file") -> str:
+    try:
+        return Path(path_str).read_bytes().decode("utf-8-sig")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ManageError(f"Failed to read {flag} {path_str}: {exc}") from exc
+
+
+def _diagnose_internal(args: argparse.Namespace) -> dict:
+    unarmored_hook = _load_hook_module()
+    cfg = unarmored_hook.load_config()
+    prompt_text = getattr(args, "prompt", None) or ""
+
+    compare_pair = getattr(args, "compare", None)
+    if compare_pair:
+        fa, fb = compare_pair[0], compare_pair[1]
+        a = _diagnose_single_text(_read_diag_file(fa, "--compare"), prompt_text, args.model or "", cfg, unarmored_hook)
+        b = _diagnose_single_text(_read_diag_file(fb, "--compare"), prompt_text, args.model or "", cfg, unarmored_hook)
+        ma, mb = a["metrics"], b["metrics"]
+        d_score = b["relapse_score"] - a["relapse_score"]
+        cva, cvb = ma.get("sent_len_cv"), mb.get("sent_len_cv")
+        d_cv = round(cvb - cva, 3) if isinstance(cva, (int, float)) and isinstance(cvb, (int, float)) else None
+        oa, ob = ma.get("opener_diversity"), mb.get("opener_diversity")
+        d_open = round(ob - oa, 3) if isinstance(oa, (int, float)) and isinstance(ob, (int, float)) else None
+        removed = [s for s in a["matched_smells"] if s not in b["matched_smells"]]
+        added = [s for s in b["matched_smells"] if s not in a["matched_smells"]]
+        verdict = "improved" if d_score < 0 else ("regressed" if d_score > 0 else "tied")
+        return {
+            "mode": "compare",
+            "file_a": str(fa),
+            "file_b": str(fb),
+            "a": {k: v for k, v in a.items() if k != "_prose"},
+            "b": {k: v for k, v in b.items() if k != "_prose"},
+            "diff": {
+                "delta_score": d_score,
+                "delta_cv": d_cv,
+                "delta_opener_diversity": d_open,
+                "smells_removed": removed,
+                "smells_added": added,
+                "verdict": verdict,
+            },
+            "_prose_a": a.get("_prose", ""),
+            "_prose_b": b.get("_prose", ""),
+        }
+
+    text = _read_diag_file(args.file, "--file") if args.file else (args.text or "")
+    return _diagnose_single_text(text, prompt_text, args.model or "", cfg, unarmored_hook)
+
+
+def diagnose_text(args: argparse.Namespace) -> dict:
+    raw = _diagnose_internal(args)
+    return {k: v for k, v in raw.items() if not k.startswith("_")}
+
+
+def _render_inline_highlights(prose: str, spans: list[dict], use_color: bool) -> str:
+    if not prose or not spans:
+        return prose
+    out: list[str] = []
+    pos = 0
+    for sp in spans:
+        st, en = sp["start"], sp["end"]
+        if st < pos or en > len(prose):
+            continue
+        out.append(prose[pos:st])
+        seg = prose[st:en]
+        tag = f"[#{sp['smell']}]"
+        if use_color:
+            code = "\x1b[35;1m" if sp["smell"] == "overcorrection_drift" else ("\x1b[31;1m" if sp["weight"] >= 2 else "\x1b[33;1m")
+            out.append(f"{code}«{seg}»{tag}\x1b[0m")
+        else:
+            out.append(f"«{seg}»{tag}")
+        pos = en
+    out.append(prose[pos:])
+    return "".join(out)
+
+
+def format_diagnose_pretty(data: dict, use_color: bool = False) -> str:
+    """Format diagnose or diagnose --compare output into a compact badge bar + inline span highlights."""
+    if data.get("mode") == "compare":
+        a, b, d = data["a"], data["b"], data["diff"]
+        ma, mb = a["metrics"], b["metrics"]
+        lines = [
+            f"[UNARMORED v0.7 COMPARE] verdict={d['verdict'].upper()} | Δscore={d['delta_score']:+d} | "
+            f"Δcv={d['delta_cv']} | Δopener_div={d['delta_opener_diversity']}",
+            f"  A ({data['file_a']}): score={a['relapse_score']} smells={a['matched_smells']} cv={ma.get('sent_len_cv')} spk={ma.get('spoken_pivot')} att={ma.get('attitude_per_k')}/k",
+            f"  B ({data['file_b']}): score={b['relapse_score']} smells={b['matched_smells']} cv={mb.get('sent_len_cv')} spk={mb.get('spoken_pivot')} att={mb.get('attitude_per_k')}/k",
+            f"  removed={d['smells_removed']} | added={d['smells_added']}",
+        ]
+        if data.get("_prose_a"):
+            lines.extend(["--- A highlights ---", _render_inline_highlights(data["_prose_a"], a.get("highlights") or [], use_color)])
+        if data.get("_prose_b"):
+            lines.extend(["--- B highlights ---", _render_inline_highlights(data["_prose_b"], b.get("highlights") or [], use_color)])
+        return "\n".join(lines) + "\n"
+
+    m = data.get("metrics") or {}
+    trig = "TRIGGER" if data.get("triggers_injection") else "PASS"
+    over = m.get("overcorrection_kind") or "none"
+    lines = [
+        f"[UNARMORED v0.7] family={data['model_family']} | lang={data['detected_language']} | "
+        f"score={data['relapse_score']} ({trig}) | cv={m.get('sent_len_cv')} | "
+        f"opener_div={m.get('opener_diversity')} | spk={m.get('spoken_pivot')} | "
+        f"att={m.get('attitude_per_k')}/k | overcorr={over}"
+    ]
+    if data.get("matched_smells"):
+        lines.append(f"Smells: {', '.join(data['matched_smells'])}")
+    if data.get("soft_tone_step_down"):
+        lines.append(f"Bidirectional Brake: step tone -> {data['soft_tone_step_down']} (2 turns)")
+    if data.get("remedy_directive"):
+        lines.append(f"Remedy: {data['remedy_directive']}")
+    if data.get("classified_intent"):
+        lines.append(
+            f"Intent: {data['classified_intent']} | disk_edits={data['allows_disk_edits']} | challenge={data['is_epistemic_challenge']}"
+        )
+    prose = data.get("_prose") or ""
+    if prose and data.get("highlights"):
+        lines.extend(["--- Highlights ---", _render_inline_highlights(prose, data["highlights"], use_color)])
+    return "\n".join(lines) + "\n"
 
 
 def status_report(workspace: Path | None) -> dict:
@@ -969,6 +1099,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_diag = sub.add_parser("diagnose", help="Analyze sample model output for AI-armor smells and preview calibration.")
     p_diag.add_argument("--text", default=None, help="Sample assistant response text.")
     p_diag.add_argument("--file", default=None, help="Path to file containing sample assistant output.")
+    p_diag.add_argument("--compare", nargs=2, metavar=("FILE_A", "FILE_B"), default=None, help="Compare two output files side-by-side.")
+    p_diag.add_argument("--pretty", action="store_true", help="Render human-readable badge summary and inline smell highlights.")
     p_diag.add_argument("--prompt", default=None, help="Optional user prompt to preview intent classification, disk-edit safety, and mode directive.")
     p_diag.add_argument("--model", default="gpt-5", help="Model name hint (e.g. gpt-5, gemini-4-carbon, claude-opus, deepseek-r1).")
 
@@ -1034,7 +1166,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.subcommand == "configure":
             res = configure_runtime(args)
         elif args.subcommand == "diagnose":
-            res = diagnose_text(args)
+            raw_diag = _diagnose_internal(args)
+            if args.pretty:
+                use_color = bool(getattr(sys.stdout, "isatty", lambda: False)()) and not os.environ.get("NO_COLOR")
+                sys.stdout.write(format_diagnose_pretty(raw_diag, use_color=use_color))
+                return 0
+            res = {k: v for k, v in raw_diag.items() if not k.startswith("_")}
         elif args.subcommand == "sync-local":
             py_exe = args.python_override or resolve_real_python()
             if not _is_valid_python_binary(py_exe):

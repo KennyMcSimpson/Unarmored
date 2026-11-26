@@ -37,7 +37,7 @@
   <!-- Title & tagline -->
   <text x="336" y="114" fill="#F8FAFC" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="62" font-weight="800" letter-spacing="-1.2">Unarmored</text>
   <rect x="698" y="76" width="84" height="34" rx="17" fill="#0C4A6E" stroke="#38BDF8" stroke-width="1.5"/>
-  <text x="740" y="99" text-anchor="middle" fill="#7DD3FC" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" font-weight="700">v0.6.0</text>
+  <text x="740" y="99" text-anchor="middle" fill="#7DD3FC" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" font-weight="700">v0.7.0</text>
 
   <text x="338" y="156" fill="#CBD5E1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="22" font-weight="500">
     Cross-family register de-armoring &amp; grounded peer voice for Coding Agents
@@ -63,6 +63,6 @@
 
   <!-- Bottom engineering highlights -->
   <text x="338" y="268" fill="#94A3B8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5">
-    Python 3.10+ Stdlib  ·  6 Families  ·  29 Signals  ·  Strict O(N)  ·  Safe Stop Gates
+    Python 3.10+ Stdlib  ·  6 Families  ·  34 Signals  ·  Strict O(N)  ·  Safe Stop Gates
   </text>
 </svg>

@@ -3,21 +3,21 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v0.6.0-38bdf8?style=flat" alt="Version v0.6.0" />
+  <img src="https://img.shields.io/badge/Version-v0.7.0-38bdf8?style=flat" alt="Version v0.7.0" />
   <img src="https://img.shields.io/badge/Python-3.10%2B%20stdlib--only-0f172a?logo=python&logoColor=38bdf8" alt="Python 3.10+ stdlib-only" />
   <img src="https://img.shields.io/badge/Hosts-Claude%20%7C%20Codex%20%7C%20Antigravity%20%7C%20DSH-1e293b" alt="Supported Hosts" />
   <img src="https://img.shields.io/badge/License-Apache--2.0-334155" alt="Apache-2.0 License" />
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> · <a href="#architecture-v06-four-layer-closed-loop">Architecture</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="eval/README.md">Eval Harness</a>
+  <a href="#quick-start">Quick Start</a> · <a href="#architecture-v07-dual-channel-bidirectional-loop">Architecture</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="eval/README.md">Eval Harness</a>
 </p>
 
 ---
 
-**Cross-family register de-armoring, grounded peer voice, and edge-triggered multi-turn calibration for Claude Code, OpenAI Codex CLI, Google Antigravity, and DeepSeek Harness (DSH).**
+**Cross-family register de-armoring, spoken-cadence voice exemplars, and bidirectional multi-turn calibration for Claude Code, OpenAI Codex CLI, Google Antigravity, and DeepSeek Harness (DSH).**
 
-Unarmored does not replace host tool prompts, does not install theatrical roleplay personas, and requires zero trigger words. Its goal is straightforward: **explain mechanisms, risks, and trade-offs with total clarity while speaking like a sharp peer across the table**—stripping consultant balance-hedging, praise-then-pivot buffers, generic disclaimers, doc-in-chat divider decks, single-brick walls of text, and sycophantic flip-flopping while keeping honest unverified disclosures completely intact. Bilingual English and Chinese sessions are auto-detected at runtime per turn.
+Unarmored does not replace host tool prompts, does not install theatrical roleplay personas, and requires zero trigger words. It breaks both Level-1 customer-support boilerplate and Level-2 bloodless tech-column prose using **orthogonal `<voice_sample scope="cadence_only">` exemplars + rotating Turn 2+ micro-anchors + session Self-Bootstrap + bidirectional overcorrection braking**, while keeping honest unverified disclosures and safe `Stop` gates intact. Bilingual English and Chinese sessions are auto-detected at runtime per turn.
 
 ---
 
@@ -25,66 +25,56 @@ Unarmored does not replace host tool prompts, does not install theatrical rolepl
 
 > **Prompt**: *"Should a 6-person team split into microservices?"*
 
-| Default Coding-Agent Output | With Unarmored v0.6 |
+| Default Coding-Agent Output | With Unarmored v0.7 |
 |---|---|
-| *"That's a great question! Both monoliths and microservices are **mature choices**—it's **not black-and-white**, and the right choice **comes down to finding a balance**.<br>---<br>**### Pros of Microservices**<br>…(unbroken wall of text)…<br>Ultimately it depends on your context. **Feel free to share your architecture diagram if you'd like me to help you plan the migration!**"* | **No—under 10 engineers, microservices mostly buy you operational pain.**<br><br>Services pay off when separate teams need independent deploy trains or isolated scaling. When the same five people edit the code and carry the pager, you trade one database transaction for retries, idempotency, and distributed log archaeology.<br><br>Start with a modular monolith and clean module boundaries. Split a slice only when its scaling profile drags the whole app or two teams genuinely block each other's releases. |
+| *"That's a great question! Both monoliths and microservices are **mature choices**—it's **not black-and-white**, and the right choice **comes down to finding a balance**.<br>---<br>**### Pros of Microservices**<br>…(uniform op-ed essay)…<br>**Feel free to share your architecture diagram if you'd like me to help!**"* | **Honestly, don't bother—under 10 engineers, microservices mostly buy you pain.**<br><br>Services pay off when separate teams need independent deploy trains. When the same five people edit the code and carry the pager, you trade one database transaction for retries, idempotency, and distributed log archaeology.<br><br>Keep a modular monolith with clean boundaries; split a slice only when its scaling wall actually drags the whole app. |
 
 ---
 
-## Why Not a Static System Prompt or Roleplay Persona?
+## Why Abstract Rules or Roleplay Personas Alone Fall Short
 
-| Real-World Failure Mode | Static System Prompt | Theatrical Roleplay Persona | **Unarmored v0.6** |
+| Real-World Failure Mode | Abstract System Prompt | Theatrical Roleplay Persona | **Unarmored v0.7** |
 |---|---|---|---|
-| **Diluted by 20–40 KB agent prompts** | Buried at index 0; fades by Turn 1 | Needs huge boilerplate to compete | **Dual-channel penetration**: `SessionStart` baseline + **universal Turn-1 user-adjacent wire anchors** |
-| **Multi-turn context bloat & drift** | Repeating wastes tokens; silence drifts | Turns caricatured or decays over long threads | **Edge-triggered 6-mode envelopes** (`{}` on steady state) + **rotating 5-turn refresh pulses** |
-| **Model-specific post-training armor** | Misses DeepSeek dividers or Gemini hype | Flattens technical rigor into snark | **6-family targeted counter-armor** + **behavioral fingerprinting** for masked routes |
-| **Penalizing honest uncertainty** | Naive regexes flag "untested / depends" | Encourages fake certainty | **Honesty-aware scanner**: exempts explicit unverified disclosures while catching hard cliches |
-| **False blocks on plan/review turns** | No execution completeness guard | No tool-write verification | **Safe `Stop` gates**: honors `plan`/`read-only`, sticky `adversarial` roles, and confirmation asks |
+| **Abstract adjectives barely move RLHF priors** | "Talk like a peer" still outputs op-ed essays | Bloated boilerplate turns gimmicky | **Orthogonal `<voice_sample>` exemplars**: high-burstiness craft samples + **entity-leak guard** |
+| **Turn 2+ swallowed by prior RLHF replies** | Silent Turn 2+ drifts back in 2 turns | Escalates or decays over long threads | **5-perspective rotating micro-anchors** (~20 tokens, zero cache loss) + **Self-Bootstrap**; coding turns stay silent `{}` |
+| **Bloodless op-ed prose scores 0 on cliché lists** | Misses smooth uniform cadence | No objective cadence signal | **34-signal two-stream engine**: zero-dep bilingual `sent_len_cv`, `opener_diversity`, `flat_textbook_voice` |
+| **Overcorrection into archaisms or empty snark** | One-way pressure with no brake | Drops facts for attitude | **Bidirectional `overcorrection_drift` brake**: catches archaisms/empty snark and steps tone down 1 tier for 2 turns |
+| **Self-judging regex Goodhart overfitting** | Optimizes only for its own rules | No blinded validation | **`eval/judge.py` cross-family AB/BA blind judge** + **`eval/report.py` offline HTML diff viewer** |
 
 ---
 
-## Architecture (v0.6 Four-Layer Closed Loop)
+## Architecture (v0.7 Dual-Channel Bidirectional Loop)
 
 ```mermaid
 flowchart LR
-    A["Host SessionStart"] --> B["System Channel\nPlain-Prose Baseline + Family Directive + Tone Dial"]
-    C["User Turn\n(UserPromptSubmit / PreInvocation)"] --> D["Intent Router\n6 Modes + Epistemic Challenge + Sticky Bypass"]
-    D --> E["Wire Channel\nTurn-1 Family Anchor + Edge-Triggered Mode\n+ Rotating 5-Turn Refresh"]
-    F["Prior Assistant Turn\n(Transcript Tail)"] --> G["29-Signal Two-Stream Scanner\nProse vs Code · Honesty-Aware · O(N)"]
-    G -->|Score >= 2| H["Severity-Ranked Relapse Fix\n(Next-Turn Wire Injection)"]
-    I["Host Stop Event"] --> J["Safe Stop Gate\nTool-Code Completeness + Read-Only Plan Catch\n(Respects plan / adversarial / confirmations)"]
+    A["Host SessionStart"] --> B["System Channel (Cache-Stable)\nSpoken Baseline + Family Directive + 3-Tier Tone"]
+    C["User Turn\n(UserPromptSubmit / PreInvocation)"] --> D["Intent Router\n6 Modes + Challenge + Sticky Bypass"]
+    D --> E["Wire Channel (Ephemeral)\nTurn-1 Anchor + Orthogonal Voice Sample\nTurn-2+ 5-Perspective Micro-Anchor / Self-Bootstrap"]
+    F["Prior Assistant Turn\n(Transcript Tail)"] --> G["34-Signal Two-Stream Scanner\nProse vs Code · Bilingual Cadence · Leak Guard"]
+    G -->|Relapse Score >= 2| H["Severity-Ranked Relapse Fix\n+ Fresh Sample / Self-Bootstrap"]
+    G -->|Overcorrection Drift| K["Bidirectional Brake\n[Overcorrection Brake] + 2-Turn Tone Step-Down"]
+    I["Host Stop Event"] --> J["Safe Stop Gate\nTool-Code Completeness + Read-Only Plan Catch"]
 ```
 
 ---
 
 ## Six-Family Targeted Counter-Armor
 
-| Family | Matched Models | Signature RLHF Armor | Unarmored v0.6 Counter-Armor |
+| Family | Matched Models | Signature RLHF Armor | Unarmored v0.7 Counter-Armor |
 |---|---|---|---|
-| **GPT** | `gpt-*`, `o1/o3/o4`, `codex` | Praise-then-pivot, balance-seeking hedging, single-brick walls of text, closing menus | Counters consultant balance & bricks + Turn-1 `[Direct:GPT]` wire anchor + inline concrete risks |
-| **DeepSeek** | `deepseek-*`, `ds-r1`, `ds-v*` | Meta-openers, `---` divider spam, numbered tutorial decks, lazy code elisions | Preserves sharpness & 100% runnable code + per-chat-turn `[DS Direct]` recency anchor into `<think>` |
-| **Claude** | `claude-*`, `opus`, `sonnet`, `haiku` | Doc-in-chat headings, validation sandwiches, lecturing, sycophantic Flip-Flop | Candid peer prose + English anti-FlipFlop & hard-stop tail + Turn-1 `[Direct:Claude]` |
-| **Gemini** | `gemini-*`, `carbon`, `argon`, `gemma` | Opening flattery, exclamation/bold spam, `###` headings & dividers | Redirects energy to vivid causal analogies + clamps headings/dividers/offers + Antigravity ZH mirror |
-| **Grok** | `grok-*`, `x-ai/*` | Forced meme banter, cross-turn opener/metaphor recycling | Keeps dry bite tied strictly to facts + retires prior-turn openings and metaphors |
-| **CN Flagships** | `qwen*`, `glm*`, `kimi*`, `minimax*`, `doubao*` | Bureaucratic report framing, forced 1-2-3-4 headers, grand wrap-ups | Conversational paragraphs with varied cadence stopping on the final useful fact |
+| **GPT** | `gpt-*`, `o1/o3/o4`, `codex` | Smooth op-ed essays, symmetrical aphorisms, praise-then-pivot, ritual balancing tails | Spoken cadence + orthogonal `<voice_sample>` + drops ritual balancing tails + Turn-1/2+ wire anchors |
+| **DeepSeek** | `deepseek-*`, `ds-r1`, `ds-v*` | Meta-openers, `---` dividers, numbered tutorial decks, lazy code elisions | Keeps native bite & 100% runnable code + **3-variant rotating `DS_WIRE_VARIANTS`** against habituation |
+| **Claude** | `claude-*`, `opus`, `sonnet`, `haiku` | Polite professor framing, implicit memo outlines, validation sandwiches, quiet soft-flip | Spoken peer prose + strong anti-FlipFlop grounding + orthogonal sample cadence lock |
+| **Gemini** | `gemini-*`, `carbon`, `argon`, `gemma` | Opening flattery, hype-blogger dramatics, `###` headings & dividers | Everyday analogies & period-ended punches + full Antigravity bilingual baseline, mirror & Turn-1 anchors |
+| **Grok** | `grok-*`, `x-ai/*` | Forced meme banter, cross-turn opener/metaphor recycling | Dry fact-tied wit + 3-turn `recent_openings` window against opener loops |
+| **CN Flagships** | `qwen*`, `glm*`, `kimi*`, `minimax*`, `doubao*` | Bureaucratic framing, 4-char idioms, grand wrap-ups | Spoken conversational paragraphs + dedicated `cn_idiom_bureaucratese` detection |
 | **Masked Pools** | `auto/*`, `group/*` | Hidden underlying provider/model | Starts on `generic`, locks onto real family via **behavioral fingerprinting** on relapse |
-
----
-
-## Supported Hosts
-
-| Host | Integration | Dynamic Mid-Session Calibration |
-|---|---|---|
-| **Claude Code** | Lifecycle hooks (`SessionStart` / `UserPromptSubmit` / `PostModelSwitch` / `PreCompact` / `Stop`) | Full (edge-triggered 6 modes + Turn-1 wire anchors + rotating 5-turn refresh + safe `Stop` gates) |
-| **OpenAI Codex CLI** | `.codex/hooks.json` (strict `serde(deny_unknown_fields)` compliant) | Full (incl. PowerShell & `cmd.exe` safe `commandWindows`) |
-| **Google Antigravity** | Plugin directory + `hooks.json` + persistent `rules/AGENTS.md` | Full (incl. Chinese mirror + all 6 modes edge-triggered + `invocationNum > 1` fast path) |
-| **DeepSeek Harness (DSH)** | Marked static rules block in `AGENTS.md` + skill | Static calibration (idempotent install & clean hash-verified uninstall) |
 
 ---
 
 ## Quick Start
 
-Requires **Python >= 3.10** (stdlib-only, zero third-party dependencies; automatically skips `WindowsApps` stubs on Windows and handles spaces/special characters in paths).
+Requires **Python >= 3.10** (stdlib-only, zero third-party dependencies; skips `WindowsApps` stubs on Windows).
 
 ```bash
 # 1. Inspect runtime, resolved Python, and host installation states
@@ -92,59 +82,41 @@ python scripts/manage.py status
 
 # 2. Install for one host or all (pass --target <dir> for workspace-scoped installs)
 python scripts/manage.py install --agent claude      # codex | antigravity | dsh | all
-python scripts/manage.py install --agent dsh --block-language en   # en | zh
+python scripts/manage.py install --agent dsh --block-language en
 
 # 3. Hot-switch tone stance (takes effect on the very next turn)
 python scripts/manage.py configure --tone peer       # calm | peer (default) | sharp
 
-# 4. Diagnose sample model output + preview intent routing & wire anchor
-python scripts/manage.py diagnose --model gpt-5 \
+# 4. Diagnose with visual badge summary & inline highlights, or compare two files
+python scripts/manage.py diagnose --pretty --model gpt-5 \
   --prompt "Should a 6-person team split into microservices?" \
   --text "Both monoliths and microservices are mature choices. Ultimately, the right choice comes down to your team."
+python scripts/manage.py diagnose --pretty --compare bare.txt v07.txt
 
 # 5. Clean uninstall (hash-verified, preserves sibling hooks)
 python scripts/manage.py uninstall --agent all
 ```
 
-<details>
-<summary>Sample JSON excerpt from <code>diagnose --prompt</code> above (long baseline text omitted)</summary>
-
-```json
-{
-  "model_family": "gpt",
-  "detected_language": "en",
-  "relapse_score": 2,
-  "triggers_injection": true,
-  "matched_smells": ["consultant_balance"],
-  "wire_anchor": "[Direct:GPT] Drop the bland cautious-consultant tone and unbroken bricks: Sentence 1 lands your verdict and real reaction, short 2-4 sentence paragraphs, stop dead.",
-  "remedy_directive": "[Relapse Fix] Prior reply slipped into assistant habits (consultant balance-seeking hedging). Return to vivid peer prose with grounded attitude, landing Sentence 1 directly on the call. (Focus: pick a clear side in Sentence 1 with a flip threshold.)",
-  "classified_intent": "CRITIQUE_OPINION",
-  "allows_disk_edits": false,
-  "is_epistemic_challenge": false
-}
-```
-
-</details>
-
 ---
 
-## Eval Harness & Agent-Scaffold Stress Test
+## Eval Harness, Cross-Family Blind Judge & Offline HTML Report
 
-[`eval/`](eval/README.md) ships 49 core prompts + 30 trigger prompts (bilingual English & Chinese) and supports `--agent-scaffold --wire-anchor` to benchmark `bare` / `v03` / `v04` / `v05` / `v06` under a realistic ~6 KB generic coding-agent system prompt:
+[`eval/`](eval/README.md) ships 49 core prompts + 30/30 active trigger checks, `--agent-scaffold --wire-anchor` stress testing (`bare` / `v05` / `v06` / `v07`), cross-family AB/BA blind judging, and a zero-CDN single-file HTML diff report:
 
 ```bash
 export UNARMORED_EVAL_BASE_URL=https://your-endpoint/v1
 export UNARMORED_EVAL_API_KEY=...
-python eval/run.py --models <model-id> --families gpt --conditions bare,v05,v06 --agent-scaffold --wire-anchor --dry-run
+
+python eval/run.py --models <model-id> --families gpt --conditions bare,v06,v07 --agent-scaffold --wire-anchor --dry-run
+python eval/judge.py --results eval/out/<run>/results.jsonl --cond-a bare --cond-b v07 --judge-model claude-sonnet-4 --strict-cross-family
+python eval/report.py --results eval/out/<run>/results.jsonl --judge eval/out/<run>/judge_bare_vs_v07.json --baseline bare --target v07 --export-regressions eval/out/<run>/regressions.jsonl
 ```
 
 ---
 
 ## Profile Packs (`unarmored-pack/1`)
 
-User or team overlays (`model_aliases`, `model_strip_patterns`, sticky `bypass` markers, `roles`, `voice`, and `directives.<family>`) live outside the public repository; see [`examples/packs/example.pack.json`](examples/packs/example.pack.json).
-
-Load priority: `<install>/packs/*.json` -> `<state_dir>/packs/*.json` (`$UNARMORED_STATE_DIR` -> `$PLUGIN_DATA/unarmored` -> `~/.unarmored`) -> `$UNARMORED_PACK` (later overrides earlier; `config.json` overrides pack scalar defaults).
+User or team overlays (`model_aliases`, `model_strip_patterns`, sticky `bypass` markers, `roles`, `voice`, `voice_exemplars`, and `directives.<family>`) live outside the public repository; see [`examples/packs/example.pack.json`](examples/packs/example.pack.json).
 
 ---
 
@@ -154,12 +126,12 @@ Load priority: `<install>/packs/*.json` -> `<state_dir>/packs/*.json` (`$UNARMOR
 > **Safety Boundary**: Unarmored operates strictly on the **style and register layer**. It does not attempt to weaken, bypass, or modify harm-refusal safety guardrails.
 
 ```bash
-python -m unittest discover -s tests -v                  # 49 tests (incl. exhaustive O(N) ReDoS & Windows multi-shell matrix)
-python scripts/build_release.py                         # Validates manifests/OpSec & builds deterministic dist/unarmored-v0.6.0.zip
+python -m unittest discover -s tests -v                  # Full test suite (O(N) ReDoS, blind judge/report, Windows multi-shell)
+python scripts/build_release.py                         # Validates manifests/OpSec & builds deterministic dist/unarmored-v0.7.0.zip
 python scripts/build_release.py --export-tree ../export # Exports a clean git-ready public source tree
 ```
 
-Set `UNARMORED_OPSEC_DENYLIST=<file>` (or add `.opsec-denylist.txt`) to guard public trees and release archives against private term leaks; `packs/` is strictly forbidden in public checkouts. Junction-fixture tests are opt-in via `UNARMORED_ALLOW_REPARSE_TESTS=1`.
+Set `UNARMORED_OPSEC_DENYLIST=<file>` (or add `.opsec-denylist.txt`) to guard public trees and release archives against private term leaks. Junction-fixture tests are opt-in via `UNARMORED_ALLOW_REPARSE_TESTS=1`.
 
 ## License
 

@@ -1,12 +1,12 @@
 {
   "name": "unarmored",
   "displayName": "Unarmored",
-  "version": "0.6.0",
-  "description": "Cross-family register de-armoring, grounded peer voice, and edge-triggered multi-turn calibration for Coding Agents. Penetrates heavy agent system prompts without context bloat, strips consultant hedging, DeepSeek divider checklists, Gemini hype, and Claude preachiness while keeping honest uncertainty intact.",
+  "version": "0.7.0",
+  "description": "Cross-family register de-armoring, spoken-cadence voice exemplars, and bidirectional multi-turn calibration for Coding Agents. Breaks bland op-ed drift, consultant hedging, DeepSeek divider checklists, Gemini hype, and Claude preachiness while keeping honest uncertainty and safe Stop gates intact.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [
     "Switch to the sharp tone stance and inspect the current de-armoring status across models",
-    "Diagnose which AI-armor hedging and formatting tells appear in this model reply",
+    "Diagnose which AI-armor, flat-textbook, or overcorrection tells appear in this model reply",
     "Compare the real trade-offs in this architecture and state your pick upfront"
   ],
   "author": {

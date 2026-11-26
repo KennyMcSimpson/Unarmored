@@ -282,6 +282,52 @@ class TestManageCLI(unittest.TestCase):
         self.assertFalse(res["allows_disk_edits"])
         self.assertIn("consultant_balance", res["matched_smells"])
         self.assertIn("[直出·GPT]", res["wire_anchor"])
+        self.assertIn("metrics", res)
+        self.assertIn("highlights", res)
+
+    def test_diagnose_pretty_highlights_and_compare_files(self) -> None:
+        bad_f = self.ws / "bare.txt"
+        good_f = self.ws / "v07.txt"
+        bad_f.write_text(
+            "这是一个非常有价值的问题！这不是非黑即白的选择，需要在灵活性和复杂度之间寻找平衡点。如果你需要，我可以帮你画图。",
+            encoding="utf-8",
+        )
+        good_f.write_text(
+            "十人以内别上微服务，真没必要。你改个需求还得三个服务一起上线，出事半夜还是同一个人接告警，太亏了。",
+            encoding="utf-8",
+        )
+        buf_pretty = io.StringIO()
+        with redirect_stdout(buf_pretty):
+            rc1 = manage.main(["diagnose", "--pretty", "--model", "gpt-5", "--file", str(bad_f)])
+        self.assertEqual(rc1, 0)
+        pretty_out = buf_pretty.getvalue()
+        self.assertIn("[UNARMORED v0.7]", pretty_out)
+        self.assertIn("TRIGGER", pretty_out)
+        self.assertIn("[#consultant_balance]", pretty_out)
+
+        buf_cmp = io.StringIO()
+        with redirect_stdout(buf_cmp):
+            rc2 = manage.main(["diagnose", "--model", "gpt-5", "--compare", str(bad_f), str(good_f)])
+        self.assertEqual(rc2, 0)
+        cmp_json = json.loads(buf_cmp.getvalue())
+        self.assertEqual(cmp_json["diff"]["verdict"], "improved")
+        self.assertLess(cmp_json["diff"]["delta_score"], 0)
+        self.assertIn("consultant_balance", cmp_json["diff"]["smells_removed"])
+
+        buf_cmp_p = io.StringIO()
+        with redirect_stdout(buf_cmp_p):
+            rc3 = manage.main(["diagnose", "--pretty", "--model", "gpt-5", "--compare", str(bad_f), str(good_f)])
+        self.assertEqual(rc3, 0)
+        self.assertIn("[UNARMORED v0.7 COMPARE] verdict=IMPROVED", buf_cmp_p.getvalue())
+
+        # Overcorrection archaic drift surfaces soft_tone_step_down in both JSON and --pretty
+        buf_arch = io.StringIO()
+        with redirect_stdout(buf_arch):
+            rc4 = manage.main(["diagnose", "--model", "gpt-5", "--text", "Whilst the cache thereof stays warm, herein lies the fault."])
+        self.assertEqual(rc4, 0)
+        arch_res = json.loads(buf_arch.getvalue())
+        self.assertIn("overcorrection_drift", arch_res["matched_smells"])
+        self.assertEqual(arch_res["soft_tone_step_down"], "calm")
 
     def test_sparse_configure_corrupt_refusal_diagnose_errors_and_uninstall_boundaries(self) -> None:
         # 1. Sparse configure must NOT clobber profile pack defaults (tone/language) when only --stop-guard is set

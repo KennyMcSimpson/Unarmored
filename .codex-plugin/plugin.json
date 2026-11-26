@@ -1,14 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "unarmored",
-  "version": "0.6.0",
-  "description": "Cross-family register de-armoring, grounded peer voice, and edge-triggered multi-turn calibration for Coding Agents.",
+  "version": "0.7.0",
+  "description": "Cross-family register de-armoring, spoken-cadence voice exemplars, and bidirectional multi-turn calibration for Coding Agents.",
   "license": "Apache-2.0",
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "Unarmored",
-        "shortDescription": "Targeted per-model removal of hedging, hype, lecturing, and code elision",
+        "shortDescription": "Targeted per-model removal of hedging, flat op-ed drift, lecturing, and code elision",
         "category": "Productivity",
         "logo": "./assets/logo.svg",
         "composerIcon": "./assets/logo.svg"

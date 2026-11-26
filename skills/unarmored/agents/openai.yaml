@@ -1,4 +1,4 @@
 interface:
   display_name: "Unarmored"
-  short_description: "Targeted per-model removal of hedging, hype, lecturing, and code elision for a grounded peer voice"
+  short_description: "Targeted per-model removal of hedging, flat op-ed drift, lecturing, and code elision for a grounded peer voice"
   default_prompt: "Inspect the current Unarmored calibration status or switch the active tone stance."

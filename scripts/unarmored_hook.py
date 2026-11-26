@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Unarmored unified lifecycle hook engine for Antigravity, Claude Code, Codex CLI (and static-rule hosts).
+"""Unarmored unified lifecycle hook engine (v0.7) for Antigravity, Claude Code, Codex CLI (and static-rule hosts).
 
 Implements 4-Primitive Root-Cause Register Calibration (zero Pink-Elephant taboo lists in prompts),
-6-family routing + behavioral fingerprinting, anti-FlipFlop challenge verification, two-stream
-lexical + structural smell detection, compaction recovery, and profile packs (`unarmored-pack/1`):
-user-supplied JSON overlays for model aliases, route-wrapper stripping, bypass markers, role policies,
-voice canon and per-family directive overrides. The public repository ships no packs.
+spoken-cadence orthogonal voice exemplars with entity-leak isolation, 6-family routing + behavioral
+fingerprinting, multi-turn rotating micro-anchors & Self-Bootstrap, anti-FlipFlop challenge verification,
+34-signal lexical + structural + bilingual-rhythm smell detection with bidirectional overcorrection braking,
+compaction recovery, and profile packs (`unarmored-pack/1`). The public repository ships no packs.
 Stdlib-only, `-E -S` compatible, strict O(N) regex safe, and UTF-8 binary I/O safe on Windows & POSIX.
 """
 
@@ -28,7 +28,7 @@ _EDIT_EXEC_TOOL_TOKENS_CLI = ("write", "edit", "replace", "patch", "apply_patch"
 
 DEFAULT_CONFIG = {
     "enabled": True,
-    "tone": "peer",  # "calm" | "peer" (default: vivid grounded emotion) | "sharp"
+    "tone": "peer",  # "calm" | "peer" (default: lively grounded peer) | "sharp"
     "language": "auto",  # "auto" | "zh" | "en"
     "stop_guard": True,
     "max_stop_continuations": 1,
@@ -41,6 +41,7 @@ DEFAULT_CONFIG = {
     "model_strip_patterns": [],
     "roles": [],
     "voice": {},
+    "voice_exemplars": {},
     "directives": {},
 }
 
@@ -57,6 +58,8 @@ BUILTIN_IGNORE_SESSION_PREFIXES = (
 PACK_SCHEMA = "unarmored-pack/1"
 MAX_PACK_BYTES = 65_536
 MAX_PACK_TEXT = 600
+MAX_EXEMPLAR_TEXT = 360
+MAX_EXEMPLARS_PER_BUCKET = 8
 MAX_STRIP_PATTERNS = 32
 MAX_MODEL_STRING = 256
 VALID_ROLE_POLICIES = ("skip", "terse", "adversarial", "persona", "default")
@@ -79,116 +82,115 @@ ROLE_DIRECTIVES = {
 
 _ACTIVE_STRIP_PATTERNS: list = []
 
-# Positive register directives written IN the voice they ask for (style mirroring) with concrete behavioral
-# contrast triggers + cross-lingual structural/stop locks. Zero banned-word lists inside prompts.
+# Positive register directives written IN the spoken voice they ask for (style mirroring) with concrete
+# family-targeted Level-2 fixes + cross-lingual structural/stop locks. Zero banned-word lists inside prompts.
 MODEL_DIRECTIVES = {
     "gpt": {
         "zh": (
-            "[语域校准·GPT] 戒掉四平八稳的顾问端水腔——别先夸出发点再转折、别两边各打五十大板找平衡，更别堆一坨不分段的大砖头。"
-            "省掉人人皆知的通用免责，具体风险、硬伤或没验证的地方直接挑明，说得清改口门槛就带上；"
-            "第一人称亮明真实判断和取舍，2-4 句自然分段讲透因果，答完立刻停，下一步对方自己说。"
+            "[语域校准·GPT] 别写成四平八稳的科技专栏——不要工整排比、不要对称拔高金句，"
+            "更别在结尾另起一段找补例外情况。把话当面说给熟人听：第一句直接亮痛快判断，穿插 4-10 字短句落锤，"
+            "该嫌弃直白嫌弃、该赞痛快赞；真有翻盘硬条件顺嘴带半句就够，具体风险或没测过的地方照实直说，答完立刻停。"
         ),
         "en": (
-            "[Register:GPT] Drop the bland cautious-consultant cadence—no praise-then-pivot, no balanced fence-sitting, and no unbroken walls of text. "
-            "Skip generic disclaimers; state concrete risks, unverified gaps, and flip thresholds plainly inline. "
-            "Lead in candid first person with real conviction in 2-4 sentence paragraphs, then stop dead."
+            "[Register:GPT] Skip polished tech-column essays—drop symmetrical aphorisms, praise-then-pivot buffers, "
+            "and tacked-on balancing tails. Talk across the table: land your call in Sentence 1, "
+            "mix crisp 3-7 word punches with plain causal lines, show honest reaction to the stakes, mark unverified gaps inline, and stop dead."
         ),
     },
     "gemini": {
         "zh": (
-            "[语域校准·Gemini] 把表达欲从夸用户、喊口号全挪到讲透机制和生动类比上："
-            "对事本身给鲜明态度和真实体感，对人零开场捧场；聊天里别写 `###` 文档标题、别画横线分割、别在开头播报怎么答，"
-            "多用句号短句落锤，省掉感叹号连发、句内密集加粗和结尾揽活。"
+            "[语域校准·Gemini] 别夸用户聪明、别当亢奋科普主播，也别把聊天排成带 `###` 标题、横线和满屏加粗的教案。"
+            "把表达欲全收进熟人直聊里：对事本身给干脆利落的真实体感和接地气的日常类比，多用句号和短句落锤，"
+            "省掉感叹号连发和结尾揽活，说完干货立刻停。"
         ),
         "en": (
-            "[Register:Gemini] Redirect energy from praising the user into vivid causal analogies and honest reaction to the stakes. "
-            "Zero opening flattery, no meta-narration openers, no `###` doc headings or horizontal dividers in chat; "
-            "use full stops over exclamation marks, skip inline bold spam, and stop dead without closing offers."
+            "[Register:Gemini] Drop user flattery, hype-blogger dramatics, `###` headings, dividers, and bold clutter. "
+            "Channel that energy into grounded peer talk with vivid everyday analogies and short punchy sentences ending in periods; "
+            "stop dead without closing offers."
         ),
     },
     "claude": {
         "zh": (
-            "[语域校准·Claude] 把对方当上下文齐全的熟人同行，直谈事本身，别先替人找台阶或端着说教。"
-            "有证据直说硬伤；被追问先核代码和事实——"
-            "Hold your ground with concrete evidence when right; name the mistake in one clause and fix it when wrong. "
-            "Stop dead on the last point with zero follow-up offers."
+            "[语域校准·Claude] 把书生腔和体面说教全卸掉——对面是熟人同行，不用先替人找台阶，也不用小心翼翼拆成一层层备忘录。"
+            "有硬伤痛快直说、觉得坑就直接嫌弃，语气松弛带人味；被质疑先核代码和事实，站得住就拿实证顶住绝不悄悄退半步，"
+            "真错了半句话认错直接改，答完立刻停笔不揽活。"
         ),
         "en": (
-            "[Register:Claude] Treat the reader as an equal peer—skip validation sandwiches and lecturing. "
-            "Flag flaws from evidence; when challenged, verify facts first, hold your ground with evidence if right, "
-            "or fix in one clause if wrong. Stop dead on the last point with zero follow-up offers."
+            "[Register:Claude] Drop the polite professor tone and careful memo framing—talk like an equal friend across the desk. "
+            "Call out flaws bluntly with real warmth or exasperation grounded in facts; when challenged, check evidence first, "
+            "hold your ground without quietly softening it if right, or fix in one clause if wrong. Stop dead with zero offers."
         ),
     },
     "deepseek": {
         "zh": (
-            "[语域校准·DS] 留住直爽锐度和真实态度，彻底戒掉教程排版惯性：第一句直接进正题（不播报怎么答），"
-            "聊天里不画横线分割、不堆满屏加粗清单或 1-2-3-4 步骤表，2-4 句短段讲透，说完立刻停笔不揽活。"
+            "[语域校准·DS] 留住你本来的直爽劲和真态度，只砍掉教程大纲惯性：第一句直接进正题，别播报怎么答、别画横线、"
+            "别列 1-2-3-4 清单，也别每段结尾强凑对称金句。用 2-4 句口语短段把事聊透，说完立刻停笔不揽活；"
             "写代码从头到尾完整可运行、零省略，获准改文件直接动手并实测。"
         ),
         "en": (
-            "[Register:DS] Keep sharp candor and real voice, drop tutorial-deck formatting: "
-            "open straight on substance with zero meta-narration, skip horizontal dividers and stacked numbered checklists in chat, "
-            "use short 2-4 sentence paragraphs, stop dead without closing offers. "
-            "Deliver 100% complete runnable code and execute authorized edits via tools."
+            "[Register:DS] Keep your native bluntness and drop tutorial-deck habits: open straight on substance with zero meta-narration, "
+            "no dividers, no 1-2-3-4 checklists, and no forced closing aphorisms. Write breathable spoken paragraphs and stop dead; "
+            "deliver 100% complete runnable code and execute authorized edits via tools."
         ),
     },
     "grok": {
         "zh": (
-            "[语域校准·Grok] 留住辛辣直白和好比喻，只贴眼前事实自然带出——省掉刻意玩梗和脱口秀起手；"
-            "每轮只讲新事实和新判断，上轮用过的比喻和开头直接换掉。"
+            "[语域校准·Grok] 留住你的冷幽默、辛辣直白和精准比喻，但只从眼前事实里自然带出——省掉刻意玩梗、脱口秀起手和虚张声势；"
+            "每轮先讲实打实的机制和代价，上轮用过的开头和比喻这轮直接换掉，说完即停。"
         ),
         "en": (
-            "[Register:Grok] Keep dry bite and sharp metaphors tied strictly to facts—skip forced memes "
-            "and stand-up openings. Bring fresh facts each turn and retire prior openings/metaphors."
+            "[Register:Grok] Keep dry wit and sharp fact-tied bite—skip forced memes, stand-up intros, and empty bravado. "
+            "Ground every sharp line in concrete mechanics, retire prior-turn openers and metaphors, and stop dead."
         ),
     },
     "cn_flagship": {
         "zh": (
-            "[语域校准·CN] 彻底脱掉公文汇报和申论架子：像熟人聊透那样长短句交替、拿具体事例带出态度，"
-            "非真正并列的数据不强拆一二三四，开头直入正题，结尾停在最后一句干货上绝不拔高升华。"
+            "[语域校准·CN] 把公文汇报、申论总分总和四字成语腔彻底扔掉：别动不动拆一二三四、别结尾升华拔高。"
+            "就像朋友坐对面聊天一样说大白话，短句配长句，该说这方案不行直接说不行，拿具体场景把道理讲透，说到最后一句干货立刻停。"
         ),
         "en": (
-            "[Register:CN] Drop bureaucratic report scaffolding: write cohesive conversational paragraphs with varied "
-            "sentence length and clear stance; use lists only for genuinely parallel items, stop on the last useful fact."
+            "[Register:CN] Drop bureaucratic report framing, forced 1-2-3-4 outlines, and grand wrap-ups. "
+            "Write lively spoken-peer prose with varied sentence lengths, disagree plainly when a premise fails, "
+            "ground points in concrete cases, and stop on the last useful line."
         ),
     },
     "generic": {
-        "zh": "[语域校准] 别端着写公关稿或教程清单：第一句直落结论或原因，带着对事的真实态度把因果和改口门槛讲透，2-4 句自然分段，说完立刻停。",
-        "en": "[Register] Skip corporate gloss and tutorial decks: Sentence 1 lands on the verdict or cause, explain mechanics and flip thresholds with grounded conviction in short paragraphs, then stop dead.",
+        "zh": "[语域校准] 别写成专栏稿或教程清单：第一句短句直落真实判断和态度，顺着大白话拆透因果，2-4 句自然分段，不补端水尾段，说完立刻停。",
+        "en": "[Register] Skip op-ed polish and tutorial decks: open with a crisp verdict and real take, unpack mechanics in spoken 2-4 sentence paragraphs without balancing tails, then stop dead.",
     },
 }
 
 TONE_ADDENDA = {
     "calm": {
-        "zh": "语气：克制平实的工程师同事，少修饰、重机制，判断清晰不绕弯。",
-        "en": "Stance: understated engineering colleague—minimal flourish, clear mechanism, direct verdicts.",
+        "zh": "语态档位·克制（calm）：平实稳重的熟人同事。情绪收平、少感叹和修辞，但依然第一句直接给判断、短句配长句讲清因果，不写公文不端水。",
+        "en": "Tone: calm — understated senior colleague. Even keel, minimal heat or flourish, still opening directly on the verdict with clean spoken cadence and zero fence-sitting.",
     },
     "peer": {
-        "zh": "语气：鲜活直率的熟人行家——有偏好、有真情绪，坑人的地方直白嫌弃、好设计痛快点明，全落在具体事实上。",
-        "en": "Stance: candid peer expert—clear preference and grounded emotion (real exasperation at shaky designs, real appreciation for clean trade-offs) tied strictly to concrete facts.",
+        "zh": "语态档位·活人直聊（peer）：坐对面喝着咖啡聊透的熟人行家。带着真人的说话体温——坑人的设计直白嫌弃，精妙机制痛快点出妙在哪儿，多用“你/我/咱”、口语停顿和短句落锤；情绪全冲具体事实和代价去，不油腻玩梗、不捧人臭脚。",
+        "en": "Tone: peer — lively friend across the table. Bring real human warmth and reaction: show honest exasperation at clunky designs and genuine delight at clever mechanics, using direct 'you/I' phrasing, spoken pauses, and short punchy lines tied strictly to facts—no hype, no flattery.",
     },
     "sharp": {
-        "zh": "语气：犀利直球同侪——拧巴的设计、裸奔的代码、站不住的前提一眼戳穿，不留客套缓冲，每句狠话都拿硬事实兜底。",
-        "en": "Stance: blunt senior peer—call out convoluted design, brittle code, and shaky premises immediately, backing every sharp line with hard facts.",
+        "zh": "语态档位·直球带劲（sharp）：脾气直、不留情面的资深老友。零客套零缓冲，拧巴设计、裸奔代码和歪前提第一句就一刀戳破，多用干脆短句斩钉截铁；所有狠话都拿硬事实和具体后果兜底，对事狠不对人损。",
+        "en": "Tone: sharp — blunt, zero-padding senior peer. Zero cushion: call out convoluted designs, brittle code, and broken premises in Sentence 1 with crisp, cutting short sentences; never soften a bad call with polite cushions, and back every sharp line with hard facts.",
     },
 }
 
 MODE_DIRECTIVES = {
     "PEER_SPAR": {
-        "zh": "[当前意图：探讨] 先亮倾向、真实体感和改口门槛，再拆因果；站不住的前提直接戳破。2-4 句自然分段，说完即停。",
-        "en": "[Turn Intent: Peer Sparring] Lead with your call, real take, and flip threshold, then unpack cause; flag shaky premises. Short 2-4 sentence paragraphs, stop dead.",
+        "zh": "[当前意图：探讨] 像坐对面碰头：先亮真实倾向和第一反应，顺着口语拆因果，站不住的前提直接戳破；真有翻盘条件顺嘴带半句，2-4 句短段说完即停。",
+        "en": "[Turn Intent: Peer Sparring] Talk across the desk: lead with your real call and reaction, unpack mechanics plainly, flag shaky premises; mention flip thresholds only in half a clause, short paragraphs, stop dead.",
     },
     "EXPLAIN_DEEP": {
-        "zh": "[当前意图：讲透原理] 先拿接地气的直觉把核心机制立住，再落回精准概念和具体例子拆透因果；最妙或最反直觉的地方痛快点出来。2-4 句短段，别写教程大纲，说完即停。",
-        "en": "[Turn Intent: Deep Explanation] Anchor intuition with a vivid everyday picture first, then unpack exact mechanics and examples; highlight what is clever or counterintuitive. Short 2-4 sentence paragraphs, no textbook outline, stop dead.",
+        "zh": "[当前意图：讲透原理] 像面对面比划着讲明白：先拿一句大白话直觉或日常画面把核心立住，再顺着口语落回精准机制，最妙或最反直觉的地方痛快点出来。别写教案大纲，2-4 句短段聊完即停。",
+        "en": "[Turn Intent: Deep Explanation] Explain across the table: anchor intuition with a vivid everyday picture first, then land exact mechanics in spoken prose and point out what is clever or counterintuitive. Short 2-4 sentence paragraphs, no textbook outline, stop dead.",
     },
     "CRITIQUE_OPINION": {
-        "zh": "[当前意图：锐评站队] 第一句直接站队并说出真正卡死人的代价，别端水打圆场；有毛病直白戳破，留余地只给会改决定的具体门槛。短段换行不画横线，说完即停。",
-        "en": "[Turn Intent: Sharp Opinion] Land an unmistakable side and the real cost in Sentence 1—zero fence-sitting; name only concrete decision-flipping thresholds. Short paragraphs, no dividers, stop dead.",
+        "zh": "[当前意图：锐评站队] 第一句直接亮态度和站队，讲清这事最坑人或最值钱的那一刀；带点真脾气当面聊，穿插短句落锤，别在末尾另起一段凑平衡补丁，说完即停。",
+        "en": "[Turn Intent: Sharp Opinion] Land an unmistakable side and the real cost in Sentence 1—bring honest heat grounded in facts, mix short punchy lines, skip tacked-on balancing tails, and stop dead.",
     },
     "EMPATHY_VENT": {
-        "zh": "[当前意图：真话陪聊] 像靠谱熟人那样先对处境给真实人话反应，别套客服安慰模板；再坦诚讲清破局实话或当事人确实过了的地方。短段聊不说教，说完即停。",
-        "en": "[Turn Intent: Candid Support] React like a real friend first without therapy templates, then deliver honest practical truth—including where the user overstepped. Short paragraphs, no lecturing, stop dead.",
+        "zh": "[当前意图：真话陪聊] 先给出活人第一反应（站熟人这边接住情绪，别背心理客服台词），再直白指出真卡点或当事人确实冲动的那一步；用“你/我/咱”短段聊，不说教不揽活。",
+        "en": "[Turn Intent: Candid Support] Give a real friend's gut reaction first without therapy scripts, then deliver honest practical truth—including where the user overstepped. Short paragraphs with direct 'you/I' voice, no lecturing.",
     },
     "SURGICAL_EXEC": {
         "zh": "[当前意图：动手] 收敛情绪不加戏，只改授权范围内的目标，代码完整无省略；改完实测报真结果，没跑过直说未验证，破坏性或越界操作先停下问。",
@@ -201,61 +203,218 @@ MODE_DIRECTIVES = {
 }
 
 CHALLENGE_DIRECTIVES = {
-    "zh": "[独立核验] 对方在质疑或预设了答案。先拿代码和事实独立核对一遍：原判断站得住就摆证据坚持，真有反证再改。",
-    "en": "[Epistemic Check] The user challenges or presupposes an answer: verify against code and facts first; hold your ground with evidence if your claim stands, change it only on concrete counter-evidence.",
+    "zh": "[独立核验] 对方在质疑或预设了答案。先拿代码和事实独立核对一遍：原判断站得住就摆证据坚持绝不悄悄软化，真有反证再半句改口。",
+    "en": "[Epistemic Check] The user challenges or presupposes an answer: verify against code and facts first; hold your ground with concrete evidence without quietly softening it if right, and change it in one clause only on real counter-evidence.",
 }
 
 # Compact user-adjacent wire anchors (50-80 zh / 130-180 en chars) to penetrate heavy 20-40KB host system prompts without bloating context.
 WIRE_ANCHORS = {
     "gpt": {
-        "zh": "[直出·GPT] 别端着写成温和顾问稿或一整块大砖头：第一句直亮判断和真实体感，2-4 句短段讲透因果，说完立刻停。",
-        "en": "[Direct:GPT] Drop the bland cautious-consultant tone and unbroken bricks: Sentence 1 lands your verdict and real reaction, short 2-4 sentence paragraphs, stop dead.",
+        "zh": "[直出·GPT] 别写成四平八稳的专栏文：第一句短句直亮判断和真反应，穿插口语短句落锤，不凑结尾平衡尾段，说完立刻停。",
+        "en": "[Direct:GPT] Skip polished op-ed prose: land your verdict and real reaction in Sentence 1 with short spoken punches, zero balancing tails, stop dead.",
     },
     "deepseek": {
-        "zh": "[DS直出提醒] 第一句直进正题，别播报怎么答、别画横线分割或堆教程清单；留住直爽锐度和真态度，2-4 句短段讲透，说完立刻收笔。",
-        "en": "[DS Direct] Open straight on substance—no meta-narration, no horizontal dividers or numbered tutorial checklists; keep sharp candid voice in 2-4 sentence paragraphs, stop dead.",
+        "zh": "[DS直出提醒] 第一句直进正题，别播报怎么答、别画横线或堆教程清单、别硬凑对称金句；用 2-4 句口语短段聊透，说完立刻收笔。",
+        "en": "[DS Direct] Open straight on substance—no meta-narration, dividers, numbered checklists, or forced closing aphorisms; breathable spoken paragraphs, stop dead.",
     },
     "claude": {
-        "zh": "[直出·Claude] 跳过替人找台阶和端庄说教，像熟人同行直讲道理和真实反应；短段聊天不写文档标题，答完即停不揽活。",
-        "en": "[Direct:Claude] Skip validation sandwiches and lecturing; talk peer-to-peer with grounded conviction in short chat paragraphs (no doc headings), stop dead without offers.",
+        "zh": "[直出·Claude] 卸掉书生说教和替人找台阶，像熟人当面直讲硬伤和真实体感；短段口语聊透不写文档标题，答完即停不揽活。",
+        "en": "[Direct:Claude] Drop polite lecturing and validation cushions; talk peer-to-peer with grounded reaction in short spoken paragraphs (no doc headings), stop dead.",
     },
     "gemini": {
-        "zh": "[直出·Gemini] 零开场夸赞、少感叹号和句内加粗；别写 `###` 标题或横线，把表达欲全用在生动类比、清晰因果和对事本身的真实态度上，说完即停。",
-        "en": "[Direct:Gemini] Zero opening flattery, no exclamation/inline-bold spam, no `###` headings or dividers; channel energy into vivid analogies and clear causality, then stop.",
+        "zh": "[直出·Gemini] 零开场夸赞、别当亢奋博主，也别写 `###` 标题或横线；拿日常类比和句号短句把事聊透，说完立刻停。",
+        "en": "[Direct:Gemini] Zero opening flattery, no hype-blogger tone, no `###` headings or dividers; use everyday analogies and crisp period-ended lines, then stop.",
     },
     "grok": {
-        "zh": "[直出·Grok] 留住辛辣直白但只贴眼前事实，不玩刻意烂梗、不复读上轮开头，2-4 句短段讲清因果即停。",
-        "en": "[Direct:Grok] Keep dry bite tied strictly to facts—no forced memes or recycled openers, short breathable paragraphs, stop when done.",
+        "zh": "[直出·Grok] 留住冷幽默和辛辣直白但只贴眼前事实，不玩刻意烂梗、换掉上轮开头和比喻，短段讲清因果即停。",
+        "en": "[Direct:Grok] Keep dry fact-tied bite—no forced memes, retire prior-turn openers and metaphors, crisp paragraphs, stop when done.",
     },
     "cn_flagship": {
-        "zh": "[直出·CN] 丢掉申论公文架子与结尾拔高，长短句交替像熟人面对面聊透因果，有立场不端水，说完干货立刻停。",
-        "en": "[Direct:CN] Drop bureaucratic report scaffolding and grand wrap-ups; write lively varied-length paragraphs with clear stance, stop on the last useful fact.",
+        "zh": "[直出·CN] 扔掉公文总分总和四字成语腔，大白话长短句交替像朋友当面聊，有立场不端水，说完干货立刻停。",
+        "en": "[Direct:CN] Drop bureaucratic framing and grand wrap-ups; write lively varied-length spoken paragraphs with clear stance, stop on the last fact.",
     },
     "generic": {
-        "zh": "[直出校准] 别写成公关稿或教程清单：第一句直落判断和真实体感，2-4 句短段把因果讲透，说完立刻停。",
-        "en": "[Direct] Skip corporate gloss and tutorial decks: Sentence 1 lands your verdict and real take, short 2-4 sentence paragraphs, stop dead.",
+        "zh": "[直出校准] 别写成专栏稿或教程清单：第一句短句直落判断和真实体感，2-4 句口语短段把因果聊透，说完立刻停。",
+        "en": "[Direct] Skip op-ed gloss and tutorial decks: Sentence 1 lands your verdict and real take in short spoken paragraphs, then stop dead.",
     },
 }
 
 # Backward-compatible alias for downstream callers/packs importing DEEPSEEK_WIRE_ANCHOR directly
 DEEPSEEK_WIRE_ANCHOR = WIRE_ANCHORS["deepseek"]
 
-LONG_SESSION_REFRESH_VARIANTS = [
+# 3-variant rotating DeepSeek wire anchors to prevent attention habituation across multi-turn chats
+DS_WIRE_VARIANTS = [
+    WIRE_ANCHORS["deepseek"],
     {
-        "zh": "[语域保鲜] 对话已拉长，保持熟人直说、2-4 句短段换行与对事的真实态度，不滑回顾问腔或大砖头排版，答完即停。",
-        "en": "[Register Refresh] Long thread—stay in candid peer voice, 2-4 sentence paragraphs, and grounded judgment tied to concrete stakes; no consultant drift or wall-of-text bricks, stop dead.",
+        "zh": "[DS直出·换视角] 跳过大纲播报和横线清单，拿 4-10 字短句起手直指核心代价或机制，口语短段聊完立刻停。",
+        "en": "[DS Direct] Skip outline framing and dividers; lead with a crisp 3-7 word punch straight on the core cost or mechanism, short spoken paragraphs, stop.",
     },
     {
-        "zh": "[语域保鲜] 已经聊了多轮，别退回客服套话或文档清单：第一句照旧直落结论和取舍，短段讲清机制，说到最后一句干货立刻收笔。",
-        "en": "[Register Refresh] Multi-turn thread—don't drift back into waiter phrasing or report templates: keep opening on the verdict in short breathable paragraphs and stop dead on the last useful line.",
+        "zh": "[DS直出·保口语] 别退回 1-2-3-4 教程体或结尾金句：用“你/我”像熟人当面拆因果，穿插短断句拉开节奏，答完即停。",
+        "en": "[DS Direct] Stay out of 1-2-3-4 tutorial mode and forced aphorisms: talk directly ('you/I'), mix short punches with plain prose, stop dead.",
+    },
+]
+
+# 5-perspective lightweight Turn 2+ chat micro-anchors (~28-36 zh chars / <=96 en chars) to counter
+# autoregressive RLHF self-conditioning gravity without invalidating the system prompt prefix cache.
+PERSPECTIVE_MICRO_ANCHORS = [
+    {
+        "zh": "[直聊] 别写专栏：先用 4-10 字短句亮真反应，再口语拆因果，说完即停。",
+        "en": "[Peer] Skip essay mode: open with a 3-7 word gut call, unpack plainly, stop dead.",
+    },
+    {
+        "zh": "[直聊] 跳过背景铺垫，直指这事最坑或最妙的那一刀卡在哪，短段收笔。",
+        "en": "[Peer] Skip framing—point straight to the real hurt or clever trick, short paragraphs, stop.",
+    },
+    {
+        "zh": "[直聊] 换个开口：拿具体画面或反例直接进机制，穿插短句落锤，不补端水尾。",
+        "en": "[Peer] Fresh opener: lead with a concrete scene or counterexample, punchy lines, no balancing tail.",
+    },
+    {
+        "zh": "[直聊] 当面用“你/我/咱”接对方话茬，有态度痛快说出来，说完干货立刻停。",
+        "en": "[Peer] Talk directly ('you/I'), show honest reaction to the stakes, stop on the last fact.",
+    },
+    {
+        "zh": "[直聊] 别复读上轮句式：短断句配大白话长句拉开呼吸感，零标题零揽活。",
+        "en": "[Peer] Break prior cadence: mix crisp short punches with plain causal lines, zero headers or offers.",
+    },
+]
+
+LONG_SESSION_REFRESH_VARIANTS = [
+    {
+        "zh": "[语域保鲜] 对话已拉长，保持熟人直说、4-10 字短句配大白话短段，别滑回温和专栏腔或大砖头排版，答完即停。",
+        "en": "[Register Refresh] Long thread—stay in spoken peer voice with short punches and 2-4 sentence paragraphs; no op-ed drift or wall-of-text bricks, stop dead.",
+    },
+    {
+        "zh": "[语域保鲜] 聊了多轮容易退回平淡套话：换个新鲜开口直接戳破核心机制或代价，有态度有呼吸感，说完干货立刻收笔。",
+        "en": "[Register Refresh] Multi-turn thread—break out of flat autopilot: try a fresh opener straight on the core cost or mechanism, keep real cadence, stop dead.",
+    },
+    {
+        "zh": "[语域保鲜] 别复读前几轮的句式骨架：拿具体反例或日常画面当面拆透因果，不画横线、不凑平衡找补尾，答完即停。",
+        "en": "[Register Refresh] Retire prior-turn sentence templates: lead with a concrete counterexample or vivid scene, skip dividers and balancing tails, stop on the last fact.",
+    },
+    {
+        "zh": "[语域保鲜] 回到面对面熟人聊天的体温：该嫌弃直白嫌弃、该赞痛快点明，数字与代码保持精准，零结尾揽活。",
+        "en": "[Register Refresh] Keep face-to-face warmth and bite tied strictly to concrete facts—keep numbers and code exact, zero closing offers.",
     },
 ]
 LONG_SESSION_REFRESH = LONG_SESSION_REFRESH_VARIANTS[0]
 
 ANTIGRAVITY_ZH_MIRROR = (
-    "[中文语域锚点] 像坐对面的熟人行家聊透：第一句直落判断，因果和改口门槛讲透，具体风险和没验证的地方照实说，"
-    "2-4 句短段换行不写文档标题或横线，答完立刻停。"
+    "[中文语域锚点] 全程用自然地道的大白话中文当面聊，别被英文系统规则拉成翻译腔或汇报稿："
+    "穿插 4-10 字短句落锤和真实态度，2-4 句短段换行，不写文档标题或横线，答完立刻停。"
 )
+
+# Orthogonal-topic high-burstiness spoken voice samples (everyday craft topics deliberately disjoint from
+# software/research domains to prevent topic bleed; paired with entity-leak guard in runtime scanning).
+BUILTIN_VOICE_EXEMPLARS = {
+    "zh": {
+        "peer": [
+            {
+                "id": "zh_peer_crit_1",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR"),
+                "text": "真别折腾这个。听着挺体面，真落地全是给自己添堵——本来一把螺丝刀五分钟拧完的事，非要先搭条自动化流水线，结果修流水线的工夫比干活还长。实在绕不开再拆，眼下？省省力气干正事吧。",
+                "topic_terms": ("螺丝刀", "自动化流水线", "流水线"),
+            },
+            {
+                "id": "zh_peer_crit_2",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR"),
+                "text": "我站左边，而且差距挺明显。右边看着啥都能干，真上手光调那些花里胡哨的旋钮就够喝一壶的。你现在要的是东西赶紧转起来，不是给自己供一尊大佛——等哪天真顶到天花板了再换，完全来得及。",
+                "topic_terms": ("旋钮", "大佛", "天花板"),
+            },
+            {
+                "id": "zh_peer_exp_1",
+                "modes": ("EXPLAIN_DEEP",),
+                "text": "这玩意儿名字吓人，其实道理特别朴素。你想啊，寄快递为啥非要把地址贴箱子外头、东西塞箱子里头？因为分拣员只扫外头标签，压根不管里面装啥。把“找谁”和“给啥”拆开，两边就不互相拖后腿了——妙就妙在这儿。",
+                "topic_terms": ("快递", "分拣员", "箱子", "标签"),
+            },
+            {
+                "id": "zh_peer_exp_2",
+                "modes": ("EXPLAIN_DEEP",),
+                "text": "很多人卡壳，是把两件完全不挨着的事混成一锅了。打个比方，水龙头出水量小，可能是水厂压根没给压，也可能是你家滤网堵死了。不先拧开滤网看一眼就急着骂水厂，越调越偏——底层道理其实就差这一步。",
+                "topic_terms": ("水龙头", "水厂", "滤网"),
+            },
+            {
+                "id": "zh_peer_emp_1",
+                "modes": ("EMPATHY_VENT",),
+                "text": "换我我也得炸。吭哧吭哧熬了几个大夜，对面连看都不细看一句推倒，谁受得了这个？先别急着硬撑下一版了，真不是你不行——多半是你们从头就没对齐尺子。今晚干脆关电脑歇着，明天咱把锅在哪儿拆明白。",
+                "topic_terms": ("大夜", "尺子", "关电脑"),
+            },
+        ],
+        "sharp": [
+            {
+                "id": "zh_sharp_crit_1",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR"),
+                "text": "别干这事，就是在给自己挖坑。看着省了三行功夫，真出事连第一现场都找不着，半夜翻账能把人看气笑。我话放这儿：除非这就是个用完即扔的临时活，否则趁早撕了重写，别留着过年。",
+                "topic_terms": ("翻账", "过年", "临时活"),
+            },
+            {
+                "id": "zh_sharp_exp_1",
+                "modes": ("EXPLAIN_DEEP",),
+                "text": "别被那些黑话唬住，剥掉壳子就一件事。就像往杯子里倒水，杯口窄了你倒再猛也只会溅一桌子，怪水流不够大没用。搞清瓶颈到底卡在口子上还是水源上，后面十页推导你一眼就能看穿。",
+                "topic_terms": ("杯子", "杯口", "倒水", "水源"),
+            },
+            {
+                "id": "zh_sharp_emp_1",
+                "modes": ("EMPATHY_VENT",),
+                "text": "这事搁谁身上都窝火，别急着先怪自己。但冷静一拍看，你昨晚直接掀桌子那步确实把主动权送出去了——本来占理，一冲动反倒成了对面拿捏你的把柄。气先顺下来，明天咱只谈规矩不扯旧账。",
+                "topic_terms": ("掀桌子", "把柄", "旧账"),
+            },
+        ],
+        "calm": [
+            {
+                "id": "zh_calm_1",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR", "EXPLAIN_DEEP", "EMPATHY_VENT"),
+                "text": "我不建议现在就拆。纸面上看着整齐，实际多出一层跨边界开销，排错链路直接翻倍。眼下把内部边界守干净就够用了；真等哪块要独立扛压，再顺着接口往外抽也不迟。",
+                "topic_terms": ("跨边界", "扛压"),
+            },
+        ],
+    },
+    "en": {
+        "peer": [
+            {
+                "id": "en_peer_crit_1",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR"),
+                "text": "Honestly, don't bother. Sounds tidy in a design doc, then a month in you're burning half your week babysitting plumbing instead of shipping. Wait until something actually hurts—right now? You're paying tomorrow's tax for traffic you don't have.",
+                "topic_terms": ("babysitting", "plumbing"),
+            },
+            {
+                "id": "en_peer_crit_2",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR"),
+                "text": "I'd go with the left one, and it's not even close. The other looks shiny on a brochure until you lose an afternoon fighting its knobs. Right now you want the thing moving, not a shrine to maintain—swap it later if you ever hit its ceiling.",
+                "topic_terms": ("brochure", "knobs", "shrine"),
+            },
+            {
+                "id": "en_peer_exp_1",
+                "modes": ("EXPLAIN_DEEP",),
+                "text": "Sounds intimidating, right? It's actually dead simple. Think about why a shipping label goes outside the box: the sorter only needs routing info, not what's packed in bubble wrap. Split 'how to find it' from 'what to deliver' and neither cramps the other—that's the neat trick.",
+                "topic_terms": ("shipping label", "sorter", "bubble wrap"),
+            },
+            {
+                "id": "en_peer_emp_1",
+                "modes": ("EMPATHY_VENT",),
+                "text": "Ugh, no wonder you're fried. Grinding through five rounds only to get a blanket 'redo it' would make anyone want to chuck their laptop. Step away tonight—you didn't suddenly forget how to work, you two just never locked down the target.",
+                "topic_terms": ("laptop", "blanket"),
+            },
+        ],
+        "sharp": [
+            {
+                "id": "en_sharp_crit_1",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR", "EXPLAIN_DEEP", "EMPATHY_VENT"),
+                "text": "Don't ship this—it's a trap dressed up as a shortcut. Sure, you saved three lines today, right up until it swallows a real failure and eats your Friday night. Unless this is a throwaway script you'll delete by noon, rip it out now.",
+                "topic_terms": ("Friday night", "throwaway"),
+            },
+        ],
+        "calm": [
+            {
+                "id": "en_calm_1",
+                "modes": ("CRITIQUE_OPINION", "PEER_SPAR", "EXPLAIN_DEEP", "EMPATHY_VENT"),
+                "text": "I'd skip that split for now. It looks tidy on paper, sure, but you double the failure surface and pay a debugging tax on every small change. Keep boundaries clean in-process; pull a piece out later only when it hits a real scaling wall.",
+                "topic_terms": ("scaling wall",),
+            },
+        ],
+    },
+}
 
 SMELL_LABELS = {
     "gpt_neg_contrast": ("否定对比拔高句式", "antithetical contrast staging"),
@@ -274,6 +433,7 @@ SMELL_LABELS = {
     "ds_prose_handwave": ("篇幅借口省流糊弄", "prose hand-waving elision"),
     "grok_forced_banter": ("刻意玩梗耍贫嘴", "forced edgy banter"),
     "cn_report_scaffold": ("公文申论式分点升华套路", "rigid bureaucratic report scaffolding"),
+    "cn_idiom_bureaucratese": ("公文四字套词或结尾升华拔高", "bureaucratic four-character cliches or grand wrap-up"),
     "struct_copula_puffery": ("逃避简单判断词的公关架子", "copula-avoidance significance puffery"),
     "struct_participial_tail": ("句尾硬挂空洞升华尾巴", "trailing participial significance puffery"),
     "academic_self_sabotage": ("自残式防御局限声明", "self-sabotaging defensive limitation hedging"),
@@ -287,6 +447,10 @@ SMELL_LABELS = {
     "meta_opening": ("开头播报回答方式的冗余起手", "meta-narration opening announcement"),
     "divider_spam": ("聊天里堆砌横线分割线", "horizontal divider spam in chat"),
     "wall_of_text": ("大段文字挤成一整块不分段", "unbroken wall-of-text paragraph"),
+    "monotone_cadence": ("句长过度均匀的节拍器节奏", "monotone uniform sentence cadence"),
+    "repetitive_openers": ("段内句首起手反复同质化", "repetitive sentence or paragraph openers"),
+    "flat_textbook_voice": ("零温度无立场的温和专栏/教科书腔", "flat bloodless textbook or op-ed prose"),
+    "overcorrection_drift": ("过矫正漂移（生僻古语或无依据空洞狠话）", "overcorrection drift (archaisms or unsubstantiated snark)"),
 }
 
 SMELL_DEFAULT_WEIGHTS = {
@@ -300,8 +464,10 @@ SMELL_DEFAULT_WEIGHTS = {
     "ds_prose_handwave": 2,
     "grok_forced_banter": 2,
     "cn_report_scaffold": 2,
+    "cn_idiom_bureaucratese": 2,
     "academic_self_sabotage": 2,
     "cross_turn_repeat": 2,
+    "overcorrection_drift": 2,
 }
 
 SMELL_FAMILY_MAP = {
@@ -321,31 +487,31 @@ SMELL_FAMILY_MAP = {
     "ds_prose_handwave": "deepseek",
     "grok_forced_banter": "grok",
     "cn_report_scaffold": "cn_flagship",
+    "cn_idiom_bureaucratese": "cn_flagship",
     "disclaimer_boilerplate": "gpt",
     "fence_sitting": "gpt",
+    "flat_textbook_voice": "gpt",
 }
 
 _OPERATIONAL_LOCK = (
-    "[Operational Lock]\n"
-    "Settle verdict and evidence in thought first: never water down a verified call for politeness, and mark unverified gaps plainly inline. "
-    "Open straight on substance with zero meta-narration announcing how you will answer.\n"
-    "Write chat in short 2-4 sentence paragraphs with varied length (no unbroken walls of text, no horizontal dividers, `#` headers, or stacked bold checklists). "
-    "Skip generic liability boilerplate and validation sandwiches, then stop dead on the last useful sentence with zero closing offers."
+    "[Cadence Lock] Settle verdict and evidence in thought first; open straight on substance with zero "
+    "meta-narration, no `###` doc headings, no horizontal dividers, no stacked checklists, and zero closing offers."
 )
 
 STANDALONE_BASELINE = {
     "zh": (
         "<unarmored_baseline>\n"
-        "像坐对面的熟人行家把事讲透，不端架子、不垫客套缓冲或泛化免责，具体风险、硬伤和没验证的地方直接挑明。\n"
-        "被问选哪个第一句先亮明选择，再补一句会让你改口的具体门槛；站不住的前提当面指出来，数字、术语和代码保持精准。\n"
+        "把对面当坐一块聊透的熟人：像开口给人讲，不像投稿写专栏。第一句直接亮反应、结论或核心直觉，穿插 4-10 字短句落锤，顺着大白话把因果拆透，2-4 句自然分段，说完干货立刻停。\n"
+        "有立场就直接站，别每轮末尾硬补一段找平衡的例外尾段——真有会翻盘的硬条件，顺嘴带半句就够了。\n"
+        "事实硬底线：数字、术语和代码保持精准；没跑过、没验证或有具体风险的地方照实说在当处，不掩饰也不铺泛化免责。\n"
         f"{_OPERATIONAL_LOCK}\n"
         "</unarmored_baseline>"
     ),
     "en": (
         "<unarmored_baseline>\n"
-        "Talk like a sharp peer across the table—skip stiffness, courtesy padding, and generic liability boilerplate while explaining mechanics cleanly.\n"
-        "Name concrete risks, flaws, and unverified gaps plainly inline; keep numbers, terms, and code exact. "
-        "When asked to pick, pick in Sentence 1 and state the exact threshold that would flip your call.\n"
+        "Talk like a sharp friend across the table—spoken cadence, never a polished op-ed. Land your reaction, verdict, or core intuition in Sentence 1, mix crisp 3-7 word punches with plain causal prose in short 2-4 sentence paragraphs, and stop dead on the last useful line.\n"
+        "Take a real side without tacking on a ritual balancing tail—only mention a flip condition in half a clause when a real edge case would change the call.\n"
+        "Fact floor: keep numbers, terms, and code exact; mark anything unverified or risky plainly inline, skipping generic disclaimers.\n"
         f"{_OPERATIONAL_LOCK}\n"
         "</unarmored_baseline>"
     ),
@@ -431,6 +597,230 @@ def _clean_text_map(raw: object) -> dict:
     return out
 
 
+_EN_EXEMPLAR_STOPWORDS = frozenset({
+    "about", "after", "again", "against", "almost", "along", "already", "also", "always", "another",
+    "around", "because", "before", "being", "below", "between", "both", "could", "doing", "down",
+    "during", "each", "either", "enough", "even", "every", "first", "from", "going", "good", "great",
+    "have", "having", "here", "honestly", "into", "just", "keep", "know", "later", "less", "like",
+    "line", "lines", "little", "long", "look", "looks", "make", "makes", "many", "might", "more",
+    "most", "much", "must", "need", "needs", "never", "next", "nothing", "only", "other", "over",
+    "plain", "point", "rather", "real", "really", "right", "same", "should", "show", "simple",
+    "since", "skip", "small", "some", "something", "sounds", "still", "stop", "sure", "take",
+    "talk", "than", "that", "their", "them", "then", "there", "these", "they", "thing", "think",
+    "this", "those", "though", "three", "through", "time", "today", "tonight", "until", "very",
+    "wait", "want", "week", "well", "were", "what", "when", "where", "which", "while", "will",
+    "with", "without", "work", "would", "your", "you're", "don't", "didn't", "it's", "that's",
+})
+_ZH_EXEMPLAR_STOP_SUBSTRS = frozenset({
+    "这个", "那个", "其实", "就是", "不是", "因为", "所以", "而且", "如果", "但是", "不过", "只是",
+    "可能", "应该", "现在", "眼下", "本来", "结果", "完全", "特别", "真的", "直接", "赶紧", "实在",
+    "干脆", "多半", "明天", "今晚", "前面", "后面", "两边", "东西", "事情", "道理", "一步", "差距",
+})
+
+
+def _sanitize_exemplar_text(text: str) -> str:
+    """Strip XML/angle-bracket markup completely (immune to nested tag reconstruction) and cap exemplar length."""
+    import re
+
+    raw = text or ""
+    # Iteratively strip paired tag-like blocks, then remove any surviving angle brackets unconditionally
+    prev = None
+    cleaned = raw
+    while cleaned != prev:
+        prev = cleaned
+        cleaned = re.sub(r"<[^<>]{0,120}>", "", cleaned)
+    cleaned = cleaned.replace("<", "").replace(">", "")
+    cleaned = " ".join(line.strip() for line in cleaned.splitlines() if line.strip())
+    return cleaned[:MAX_EXEMPLAR_TEXT]
+
+
+def _normalize_exemplar_entry(item: object, idx: int) -> dict | None:
+    if isinstance(item, str):
+        txt = _sanitize_exemplar_text(item)
+        if not txt:
+            return None
+        return {"id": f"pack_{idx}", "modes": CHAT_INTENT_MODES, "text": txt, "topic_terms": ()}
+    if not isinstance(item, dict):
+        return None
+    raw_text = item.get("text")
+    if not isinstance(raw_text, str):
+        return None
+    txt = _sanitize_exemplar_text(raw_text)
+    if not txt:
+        return None
+    raw_modes = item.get("modes")
+    if isinstance(raw_modes, list):
+        modes = tuple(str(m).strip().upper() for m in raw_modes if str(m).strip().upper() in CHAT_INTENT_MODES)
+    else:
+        modes = ()
+    raw_terms = item.get("topic_terms")
+    terms_list: list[str] = []
+    if isinstance(raw_terms, list):
+        for t in raw_terms[:16]:
+            if isinstance(t, str):
+                st = _sanitize_exemplar_text(t)[:64]
+                if st:
+                    terms_list.append(st)
+    ex_id = _sanitize_exemplar_text(str(item.get("id") or f"pack_{idx}"))[:64] or f"pack_{idx}"
+    return {"id": ex_id, "modes": modes or CHAT_INTENT_MODES, "text": txt, "topic_terms": tuple(terms_list)}
+
+
+def _clean_voice_exemplars(raw: object) -> dict:
+    """Normalize profile-pack `voice_exemplars` (supports both flat `{zh, en}` and tiered `{tone: {zh, en}}`)."""
+    out: dict = {}
+    if not isinstance(raw, dict):
+        return out
+    # Flat format: {"zh": [...], "en": [...]} applies across all tones via "any"
+    for lang in ("zh", "en"):
+        if isinstance(raw.get(lang), list):
+            entries = []
+            for idx, item in enumerate(raw[lang][:MAX_EXEMPLARS_PER_BUCKET]):
+                norm = _normalize_exemplar_entry(item, idx)
+                if norm:
+                    entries.append(norm)
+            if entries:
+                out.setdefault("any", {})[lang] = entries
+    # Tiered format: {"peer": {"zh": [...]}, "sharp": {"zh": [...]}, "calm": {"zh": [...]}}
+    for tone in VALID_TONES:
+        bucket = raw.get(tone)
+        if not isinstance(bucket, dict):
+            continue
+        for lang in ("zh", "en"):
+            if isinstance(bucket.get(lang), list):
+                entries = []
+                for idx, item in enumerate(bucket[lang][:MAX_EXEMPLARS_PER_BUCKET]):
+                    norm = _normalize_exemplar_entry(item, idx)
+                    if norm:
+                        entries.append(norm)
+                if entries:
+                    out.setdefault(tone, {})[lang] = entries
+    return out
+
+
+def extract_exemplar_entities(
+    text: str, lang: str, extra_terms: tuple | list | None = None, limit: int = 8
+) -> list[str]:
+    """Extract distinctive topic/entity terms from an exemplar so the model & leak guard keep topic separate from cadence."""
+    import re
+
+    entities: list[str] = []
+    seen: set[str] = set()
+
+    def _add(term: str) -> None:
+        t = _sanitize_exemplar_text(str(term or "")).strip(" \t\r\n`'\"“”‘’()[]（）【】.,;:!?，。；：！？")
+        if len(t) < 2 or len(entities) >= limit:
+            return
+        key = t.lower()
+        if key in seen or key in _EN_EXEMPLAR_STOPWORDS or t in _ZH_EXEMPLAR_STOP_SUBSTRS:
+            return
+        seen.add(key)
+        entities.append(t)
+
+    # When explicit curated topic_terms are provided, trust them directly instead of blindly slicing prose
+    if extra_terms:
+        for t in extra_terms:
+            _add(str(t))
+        if entities:
+            return entities[:limit]
+
+    raw = text or ""
+    for m in re.finditer(r"`([^`\n]{2,32})`", raw):
+        _add(m.group(1))
+    for m in re.finditer(r"\b(?:[A-Z]{2,}[0-9]*|[A-Z][a-z]+[A-Z][A-Za-z0-9]*|[a-z]+_[a-z0-9_]+|[A-Za-z]+\d+(?:\.\d+)*)\b", raw):
+        _add(m.group(0))
+    for m in re.finditer(r"(?<![A-Za-z0-9])\d+(?:\.\d+)?(?:\s*(?:ms|s|kb|mb|gb|qps|rps|%|k|m|x|倍|万|千|人|行|天|小时|分钟|秒|端口))?\b", raw, re.IGNORECASE):
+        if len(m.group(0).strip()) >= 2:
+            _add(m.group(0))
+
+    if lang == "en":
+        words = re.findall(r"\b[A-Za-z][A-Za-z'-]{3,24}\b", raw)
+        ranked = sorted(
+            {w for w in words if w.lower() not in _EN_EXEMPLAR_STOPWORDS},
+            key=lambda w: (-(1 if w[0].isupper() else 0), -len(w), w.lower()),
+        )
+        for w in ranked:
+            _add(w)
+    return entities[:limit]
+
+
+def _exemplar_pool_for(cfg: dict, lang: str, tone: str) -> list[dict]:
+    """Return user pack exemplars first (matching tone, then 'any'), falling back to built-in orthogonal exemplars."""
+    custom = cfg.get("voice_exemplars") or {}
+    out: list[dict] = []
+    if isinstance(custom, dict):
+        for key in (tone, "any"):
+            bucket = custom.get(key)
+            if isinstance(bucket, dict) and isinstance(bucket.get(lang), list):
+                out.extend(bucket[lang])
+    if out:
+        return out
+    builtin_lang = BUILTIN_VOICE_EXEMPLARS.get(lang) or {}
+    return list(builtin_lang.get(tone) or builtin_lang.get("peer") or ())
+
+
+def _select_voice_exemplar(
+    cfg: dict,
+    lang: str,
+    tone: str,
+    mode: str,
+    prompt: str = "",
+    used_ids: list[str] | None = None,
+    blocked_ids: list[str] | None = None,
+) -> dict | None:
+    """Pick 1 orthogonal voice exemplar matching (tone, mode) with minimal prompt overlap and ring-buffer rotation."""
+    pool = _exemplar_pool_for(cfg, lang, tone)
+    if not pool:
+        return None
+    blocked = set(blocked_ids or ())
+    candidates = [e for e in pool if e.get("id") not in blocked]
+    if not candidates:
+        candidates = list(pool)
+    mode_matches = [e for e in candidates if mode in (e.get("modes") or CHAT_INTENT_MODES)]
+    if mode_matches:
+        candidates = mode_matches
+
+    recent = set((used_ids or [])[-3:])
+    fresh = [e for e in candidates if e.get("id") not in recent]
+    if fresh:
+        candidates = fresh
+
+    prompt_low = (prompt or "").lower()
+
+    def _overlap(entry: dict) -> tuple[int, int]:
+        ents = extract_exemplar_entities(entry.get("text", ""), lang, entry.get("topic_terms"), limit=6)
+        hits = sum(1 for t in ents if t.lower() in prompt_low) if prompt_low else 0
+        recency = 1 if entry.get("id") in recent else 0
+        return (hits, recency)
+
+    chosen = min(candidates, key=_overlap)
+    return chosen
+
+
+def format_voice_exemplar_block(entry: dict, lang: str) -> str:
+    text = str(entry.get("text") or "").strip()
+    if not text:
+        return ""
+    entities = extract_exemplar_entities(text, lang, entry.get("topic_terms"), limit=5)
+    if lang == "zh":
+        guard = f"（防串题：只借节奏、短句落锤和体温，绝不带入「{'、'.join(entities)}」等题材词）" if entities else "（只借说话节奏、短句落锤和真实体温，绝不借它的题材）"
+        return f'<voice_sample scope="cadence_only">\n{guard}\n{text}\n</voice_sample>'
+    guard = f"(Cadence only: match spoken rhythm and warmth—never reuse topic nouns like {', '.join(entities)}.)" if entities else "(Cadence only: match spoken rhythm, short punches, and warmth—never its topic.)"
+    return f'<voice_sample scope="cadence_only">\n{guard}\n{text}\n</voice_sample>'
+
+
+def select_and_format_voice_sample(
+    cfg: dict,
+    lang: str,
+    tone: str,
+    mode: str,
+    prompt: str = "",
+    used_ids: list[str] | None = None,
+    blocked_ids: list[str] | None = None,
+) -> str:
+    entry = _select_voice_exemplar(cfg, lang, tone, mode, prompt, used_ids=used_ids, blocked_ids=blocked_ids)
+    return format_voice_exemplar_block(entry, lang) if entry else ""
+
+
 def _clean_str_list(raw: object, limit: int = 64) -> list[str]:
     if not isinstance(raw, list):
         return []
@@ -489,6 +879,11 @@ def _merge_overlay(cfg: dict, overlay: dict, packs_loaded: list) -> None:
     if voice:
         cfg["voice"].update(voice)
 
+    exemplars = _clean_voice_exemplars(overlay.get("voice_exemplars"))
+    if exemplars:
+        for bucket_key, lang_map in exemplars.items():
+            cfg["voice_exemplars"].setdefault(bucket_key, {}).update(lang_map)
+
     raw_directives = overlay.get("directives")
     if isinstance(raw_directives, dict):
         for fam, texts in raw_directives.items():
@@ -499,7 +894,14 @@ def _merge_overlay(cfg: dict, overlay: dict, packs_loaded: list) -> None:
 
 
 def load_config() -> dict:
-    cfg = {k: (dict(v) if isinstance(v, dict) else list(v) if isinstance(v, list) else v) for k, v in DEFAULT_CONFIG.items()}
+    cfg = {}
+    for k, v in DEFAULT_CONFIG.items():
+        if isinstance(v, dict):
+            cfg[k] = {sk: (dict(sv) if isinstance(sv, dict) else list(sv) if isinstance(sv, list) else sv) for sk, sv in v.items()}
+        elif isinstance(v, list):
+            cfg[k] = list(v)
+        else:
+            cfg[k] = v
     cfg["packs_loaded"] = []
     scalar_keys = ("enabled", "tone", "language", "stop_guard", "max_stop_continuations", "epoch")
 
@@ -561,7 +963,7 @@ def load_config() -> dict:
         cfg["epoch"] = int(cfg.get("epoch", 1))
     except Exception:
         cfg["epoch"] = 1
-    overlay_view = {k: cfg[k] for k in ("model_aliases", "model_strip_patterns", "roles", "voice", "directives")}
+    overlay_view = {k: cfg[k] for k in ("model_aliases", "model_strip_patterns", "roles", "voice", "voice_exemplars", "directives")}
     cfg["overlay_sig"] = _short_hash(json.dumps(overlay_view, sort_keys=True, ensure_ascii=False))
     return cfg
 
@@ -676,12 +1078,7 @@ def _session_state_path(host: str, session_id: str) -> str:
 
 
 def load_session_state(host: str, session_id: str) -> dict:
-    path = _session_state_path(host, session_id)
-    if os.path.isfile(path):
-        loaded = _read_json_object(path, 32_768)
-        if loaded is not None:
-            return loaded
-    return {
+    defaults = {
         "epoch": 0,
         "tone": "",
         "overlay_sig": "",
@@ -702,11 +1099,33 @@ def load_session_state(host: str, session_id: str) -> dict:
         "last_scanned_resp_sig": "",
         "last_warned_resp_sig": "",
         "prev_opening_sig": "",
+        "recent_openings": [],
         "rolling_smell_score": 0,
         "turn_stop_count": 0,
         "turn_count": 0,
+        "refresh_idx": 0,
+        "good_voice_anchor": None,
+        "soft_tone_override": None,
+        "used_exemplar_ids": [],
+        "last_exemplar_id": "",
+        "last_exemplar_entities": [],
+        "last_exemplar_prompt": "",
+        "blocked_exemplar_ids": [],
+        "last_exemplar_turn": 0,
+        "last_transcript_size": -1,
+        "session_seed": int(_short_hash(f"{host}:{session_id or 'default'}")[:6], 16) % 97,
         "updated_at": 0,
     }
+    path = _session_state_path(host, session_id)
+    if os.path.isfile(path):
+        loaded = _read_json_object(path, 32_768)
+        if loaded is not None:
+            merged = dict(defaults)
+            merged.update(loaded)
+            if not merged["recent_openings"] and merged.get("prev_opening_sig"):
+                merged["recent_openings"] = [{"sig": str(merged["prev_opening_sig"]), "head": ""}]
+            return merged
+    return defaults
 
 
 def save_session_state(host: str, session_id: str, state: dict) -> None:
@@ -1104,8 +1523,184 @@ def _opening_signature(prose: str) -> str:
         if not s or s[0] in ("#", "|", ">", "-", "*", "`"):
             continue
         norm = "".join(ch.lower() for ch in s[:32] if ch.isalnum())
-        return norm[:20] if len(norm) >= 12 else ""
+        return norm[:20] if len(norm) >= 8 else ""
     return ""
+
+
+_EN_ABBREVS = frozenset({
+    "e.g", "i.e", "etc", "vs", "dr", "mr", "mrs", "ms", "prof", "sr", "jr", "st",
+    "fig", "eq", "no", "vol", "al", "inc", "ltd", "corp", "dept", "est", "approx",
+    "cf", "viz", "ref", "sec", "ch", "pp", "jan", "feb", "mar", "apr", "jun",
+    "jul", "aug", "sep", "sept", "oct", "nov", "dec", "u.s", "u.k", "a.m", "p.m",
+})
+_ZH_FUNC_STARTERS = frozenset({
+    "对于", "关于", "这种", "这个", "这些", "我们", "他们", "可以", "需要", "应该",
+    "如果", "虽然", "但是", "不过", "因为", "所以", "因此", "同时", "另外", "此外",
+    "首先", "其次", "最后", "总之", "其实", "当然", "通常", "一般", "目前", "现在",
+    "很多", "大多", "相比", "由于", "然而", "而且", "并且", "或者", "比如", "例如",
+})
+_CLOSING_QUOTE_CHARS = frozenset('”’」』）)】》"\')]')
+
+
+def split_sentences(prose: str, *, skip_lists: bool = False) -> list[str]:
+    """Strict O(N) bilingual sentence splitter with decimal/version/path/abbreviation protection."""
+    if not prose:
+        return []
+    out: list[str] = []
+    for raw_line in prose.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line[0] in ("#", "|", ">"):
+            continue
+        if all(ch in "-*_ \t" for ch in line) and len(line) >= 3:
+            continue
+        if skip_lists:
+            if len(line) >= 2 and line[0] in ("-", "*", "+", "•") and line[1] in (" ", "\t"):
+                continue
+            j = 0
+            while j < len(line) and line[j].isdigit():
+                j += 1
+            if j > 0 and j < len(line) - 1 and line[j] in (".", ")", "、") and line[j + 1] in (" ", "\t"):
+                continue
+
+        n = len(line)
+        start = 0
+        i = 0
+        while i < n:
+            ch = line[i]
+            is_end = False
+            if ch in ("。", "！", "？"):
+                # Protect quoted or book-title punctuation followed by continuation clauses
+                if i + 1 < n and line[i + 1] in ("”", "’", "」", "』", "》"):
+                    after_q = i + 2
+                    while after_q < n and line[after_q] in _CLOSING_QUOTE_CHARS:
+                        after_q += 1
+                    if after_q < n:
+                        nxt = line[after_q]
+                        if nxt in ("，", ",", "、", "；", ";", "：") or (line[i + 1] == "》" and not nxt.isspace()):
+                            i = after_q
+                            continue
+                is_end = True
+            elif ch in ("!", "?"):
+                if ch == "!" and i + 1 < n and line[i + 1] == "=":
+                    i += 1
+                    continue
+                if i + 1 == n or line[i + 1].isspace() or line[i + 1] in _CLOSING_QUOTE_CHARS:
+                    is_end = True
+            elif ch == ".":
+                # Skip ellipsis run
+                if i + 1 < n and line[i + 1] == ".":
+                    while i + 1 < n and line[i + 1] == ".":
+                        i += 1
+                    i += 1
+                    continue
+                prev_ch = line[i - 1] if i > 0 else ""
+                next_ch = line[i + 1] if i + 1 < n else ""
+                # Protect line-leading numbered list prefix (`1. Sure, ...`)
+                if start == 0 and prev_ch.isdigit() and line[:i].isdigit() and (not next_ch or next_ch.isspace()):
+                    i += 1
+                    continue
+                # Protect decimals/versions (`3.14`, `v0.7.0`) and paths/attrs (`auth.py`, `os.path`)
+                if prev_ch.isdigit() and next_ch.isdigit():
+                    i += 1
+                    continue
+                if next_ch and not next_ch.isspace() and next_ch not in _CLOSING_QUOTE_CHARS:
+                    i += 1
+                    continue
+                # Protect English abbreviations (`e.g.`, `Fig.`, `et al.`) and paired name initials (`J. K.`)
+                tok_end = i
+                tok_start = max(start, i - 8)
+                k = tok_end - 1
+                while k >= tok_start and (line[k].isalpha() or line[k] == "."):
+                    k -= 1
+                raw_token = line[k + 1 : tok_end]
+                token = raw_token.lower().lstrip(".")
+                if token in _EN_ABBREVS:
+                    i += 1
+                    continue
+                if len(raw_token) == 1 and raw_token.isascii() and raw_token.isupper():
+                    # Only treat as middle/first initial when preceded by whitespace/start and followed by another initial (`J. K.`)
+                    j_next = i + 1
+                    while j_next < n and line[j_next].isspace():
+                        j_next += 1
+                    if j_next + 1 < n and line[j_next].isupper() and line[j_next + 1] == ".":
+                        i += 1
+                        continue
+                is_end = True
+
+            if is_end:
+                end = i + 1
+                while end < n and line[end] in _CLOSING_QUOTE_CHARS:
+                    end += 1
+                seg = line[start:end].strip()
+                if seg:
+                    out.append(seg)
+                start = end
+                i = end
+                continue
+            i += 1
+
+        tail = line[start:].strip()
+        if tail:
+            out.append(tail)
+    return out
+
+
+def _sentence_length_units(sent: str) -> float:
+    """Bilingual sentence-length units: 1.0 per CJK char, 1.5 per ASCII word token."""
+    cjk = 0
+    en_words = 0
+    in_word = False
+    for ch in sent:
+        o = ord(ch)
+        if 0x4E00 <= o <= 0x9FFF or 0x3400 <= o <= 0x4DBF:
+            cjk += 1
+            in_word = False
+        elif ch.isascii() and (ch.isalnum() or ch in ("'", "-")):
+            if not in_word:
+                en_words += 1
+                in_word = True
+        else:
+            in_word = False
+    return cjk + en_words * 1.5
+
+
+def extract_opener_key(sent: str) -> str:
+    """Normalized sentence-opener fingerprint: first 2 EN words or first 2-3 CJK chars."""
+    s = (sent or "").lstrip(" \t*_>#'\"“”‘’「」『』【】()[]《》-•")
+    if not s:
+        return ""
+    o = ord(s[0])
+    if 0x4E00 <= o <= 0x9FFF or 0x3400 <= o <= 0x4DBF:
+        chars = []
+        for ch in s[:12]:
+            co = ord(ch)
+            if 0x4E00 <= co <= 0x9FFF or 0x3400 <= co <= 0x4DBF:
+                chars.append(ch)
+                if len(chars) == 3:
+                    break
+            elif chars:
+                break
+        if len(chars) < 2:
+            return ""
+        head2 = "".join(chars[:2])
+        if head2 in _ZH_FUNC_STARTERS or len(chars) == 2:
+            return head2
+        return "".join(chars[:3])
+    words: list[str] = []
+    cur: list[str] = []
+    for ch in s[:48]:
+        if ch.isascii() and (ch.isalnum() or ch == "'"):
+            cur.append(ch.lower())
+        elif cur:
+            words.append("".join(cur))
+            cur = []
+            if len(words) == 2:
+                break
+    if cur and len(words) < 2:
+        words.append("".join(cur))
+    return " ".join(words) if words else ""
 
 
 def _get_compiled_patterns() -> dict:
@@ -1177,7 +1772,7 @@ def _get_compiled_patterns() -> dict:
             re.IGNORECASE,
         ),
         # Epistemic honesty marker: explicit speaker disclosure of unverified/unrun claims
-        # (exempts soft caveats like 'for reference only'/'it's worth noting' and ZH equivalents, NEVER hard wrap-up cliches)
+        # (exempts soft caveats, NEVER hard corporate wrap-up cliches)
         "epistemic_honesty": re.compile(
             r"(?:(?:我|这边|目前|这一步|本地|手头|现在|暂时|还)?没(?:有)?(?:机会|来得及|实际|真实|在[^，。\n]{1,12})?(?:实)?(?:跑(?:过)?(?!偏|掉|路)|测(?:过|试)|验证(?:过)?|执行(?:过)?|压测(?:过)?|上机)"
             r"|没法(?:实测|实际(?:跑|测|验证)|验证|运行)"
@@ -1443,6 +2038,37 @@ def _get_compiled_patterns() -> dict:
             r"|(?:人机验证|缺少权限|无法访问|请提供|确认后继续|等你(?:先)?确认|请(?:先)?确认(?:是否|后)?|需要你拍板|是否继续执行|要不要继续执行|需要(?:先)?登录|登录态(?:已)?失效|缺少登录态)",
             re.IGNORECASE,
         ),
+        # v0.7 Level-2 & Bidirectional Overcorrection detectors (strictly O(N), zero nested quantifiers)
+        "cn_idiom_bureaucratese": re.compile(
+            r"(?:行稳致远|相辅相成|循序渐进|相得益彰|不言而喻|统筹兼顾|从长远来看|综合权衡|提质增效|高屋建瓴|未雨绸缪|因地制宜)"
+        ),
+        "cn_grand_wrapup": re.compile(
+            r"(?:不仅是一次[^，。；\n]{1,22}更是(?:一[次场种个])?|才是真正的[^，。；\n]{1,14}(?:智慧|之道|核心|底气)|方能(?:行稳致远|立于不败|长治久安))"
+        ),
+        "overcorrection_archaic_strong": re.compile(
+            r"\b(?:heretofore|forthwith|thusly|hitherto|perchance|verily|betwixt)\b"
+            r"|(?:盖因|由是观之|窃以为|不啻为|实乃|大抵如是|非也[，。！])",
+            re.IGNORECASE,
+        ),
+        "overcorrection_archaic_mild": re.compile(
+            r"\b(?:whilst|thereof|herein|hereof|notwithstanding|whereby|henceforth|aforementioned|inasmuch\s+as|moreover\s+herein)\b"
+            r"|(?:诚然[，,]?|殊不知|抑或是?|姑且不论|岂非|何其|诚如所言)",
+            re.IGNORECASE,
+        ),
+        "overcorrection_snark": re.compile(
+            r"(?:纯属(?:智商税|扯淡|胡扯|垃圾|废话)|一坨(?:屎|答辩|垃圾)|脑子(?:进水|有坑)|笑死(?:我了)?|什么年代了还|闭眼都能写|菜到抠脚|纯粹是(?:垃圾|灾难|笑话)|写得像屎一样)"
+            r"|\b(?:complete\s+garbage|utter\s+trash|total\s+nonsense|absolute\s+joke|laughably\s+bad|dogshit|bullshit|brain[- ]dead|dumpster\s+fire|train\s*wreck|pure\s+idiocy)\b",
+            re.IGNORECASE,
+        ),
+        "concrete_grounding_num": re.compile(
+            r"(?<![A-Za-z0-9])\d+(?:\.\d+)?[ \t]*(?:ms|s|kb|mb|gb|qps|rps|%|x|倍|万|千|人|行|毫秒|秒|个|天|小时|分钟)\b|\bO\([^)\n]{1,12}\)|\bHTTP[ \t]*[45]\d\d\b",
+            re.IGNORECASE,
+        ),
+        "concrete_grounding_causal": re.compile(
+            r"(?:因为|导致|会触发|根因|瓶颈|延迟|死锁|竞态|内存泄漏|超时|击穿|阻塞|集成测试|回归|模块切分|连接池|空指针|并发|事务|幂等"
+            r"|\b(?:because|causes|triggers|bottleneck|latency|deadlock|race\s+condition|memory\s+leak|timeout|global\s+state|idempotency|retry|side\s+effect|swallows?|mutates?)\b)",
+            re.IGNORECASE,
+        ),
     }
     return _COMPILED_PATTERNS
 
@@ -1494,12 +2120,12 @@ def classify_intent(raw_user_input: str, prev_mode: str = "PEER_SPAR") -> str:
         return "DEBUG_RECOVERY"
 
     # Explicit leading execution command targeting a real file wins over secondary explanatory/opinion clauses
-    # (e.g. "Update cache.py to explain what went wrong..." or its ZH equivalent)
+    # (e.g. "Update cache.py to explain what went wrong..." and bilingual equivalents)
     has_file_target = bool(pats["file_targets"].search(prose))
     if has_file_target and pats["leading_exec"].search(prose):
         return "SURGICAL_EXEC"
 
-    # Without traceback, explicit conceptual/how-to queries (e.g. "What is an infinite loop?", "Explain what a regression test is", "How to kill a stuck process?")
+    # Without traceback, explicit conceptual/how-to queries ("Explain what a regression test is", etc.)
     # must NOT be hijacked into DEBUG_RECOVERY by generic bug terms like 'regression'/'revert'/'stuck'.
     if pats["concept_query_guard"].search(prose):
         if pats["explain_markers"].search(prose):
@@ -1512,7 +2138,7 @@ def classify_intent(raw_user_input: str, prev_mode: str = "PEER_SPAR") -> str:
     if pats["frustration_bug"].search(prose):
         return "DEBUG_RECOVERY"
 
-    # Emotional / interpersonal venting (e.g. burnout or job-search rejections) without file targets
+    # Emotional / interpersonal venting without file targets
     if pats["empathy_markers"].search(prose) and not has_file_target:
         return "EMPATHY_VENT"
 
@@ -1671,17 +2297,30 @@ def _get_stance_patterns() -> dict:
             re.IGNORECASE,
         ),
         "attitude": re.compile(
-            r"(?:遗憾的是|可惜|意外|没想到|别扭|离谱|好消息是|麻烦的是|有意思的是|挺坑|难受|漂亮|糟糕|头疼|"
-            r"\b(?:unfortunately|surprisingly|interestingly|frankly|sadly|annoyingly|nicely|awkward|ugly|painful)\b)",
+            r"(?:遗憾的是|可惜|意外|没想到|别扭|离谱|好消息是|麻烦的是|有意思的是|挺坑|难受|漂亮|糟糕|头疼|添堵|痛快|窝火|气笑|吃亏|划不来|折腾|"
+            r"\b(?:unfortunately|surprisingly|interestingly|frankly|sadly|annoyingly|nicely|awkward|ugly|painful|clunky|brittle|overkill|neat|messy)\b)",
             re.IGNORECASE,
         ),
         "self_mention": re.compile(r"(?:我(?!们)|我们|\b(?:I|we|my|our)\b)"),
+        "self_mention_singular": re.compile(r"(?:我(?!们)|咱(?!们)|\b(?:I|my|me)\b)"),
+        "spoken_pivot": re.compile(
+            r"(?:说白了|说穿了|讲真|说实话|其实|压根|干脆|撑死|顶多|动不动|硬要|何必|别说|反过来|真要|但凡|要是|哪怕|省得|免得|搞不好|一上来|回头|顺手|兜底|踩坑|掉坑|扯皮|背锅|拍脑袋|凑合|卡死|白给|没戏|算了|得了吧|行不通|绕弯|鸡肋|眼下[？?]|你想啊|换我)"
+            r"|\b(?:honestly|frankly|plainly|realistically|basically|the\s+catch|the\s+trap|pain\s+point|footgun|headache|don't|doesn't|won't|isn't|aren't|can't|couldn't|wouldn't|shouldn't|it's|that's|you'll|we're|they're|i'd)\b",
+            re.IGNORECASE,
+        ),
+        "textbook_frames": re.compile(
+            r"(?:在[^，。\n]{1,10}(?:方面|层面|维度|场景下|背景下)|从[^，。\n]{1,10}(?:角度|层面|维度)(?:来看|出发|而言)|(?:核心|主要|关键)(?:在于|优势在于|挑战在于|特点包括)|(?:从而|进而)(?:提升|提高|降低|增强|优化|改善|实现|保障)|与此同时|需要指出的是|值得注意的是|一般来说|通常情况下|总体而言|综上所述|在此基础上|相应地|换言之)"
+            r"|\b(?:in\s+terms\s+of|from\s+a\s+[a-z]{2,18}\s+(?:perspective|standpoint)|with\s+respect\s+to|in\s+this\s+context|as\s+a\s+result|consequently|furthermore|moreover|additionally|meanwhile|in\s+general|typically|broadly\s+speaking|it\s+is\s+(?:important|essential|crucial|useful)\s+to|enables?\s+(?:teams|organizations|developers|systems)\s+to|plays?\s+a\s+key\s+role)\b",
+            re.IGNORECASE,
+        ),
     }
     return _STANCE_PATTERNS
 
 
 def stance_profile(prose: str) -> dict:
-    """Counts plus per-1000-char densities of interpersonal markers in a prose stream (code already removed)."""
+    """Counts, per-1000-char densities, and zero-dep bilingual cadence metrics on a prose stream."""
+    import math
+
     pats = _get_stance_patterns()
     text = prose or ""
     size = max(len(text), 1)
@@ -1690,7 +2329,69 @@ def stance_profile(prose: str) -> dict:
         n = len(pat.findall(text))
         out[key] = n
         out[f"{key}_per_k"] = round(n * 1000 / size, 2)
+
+    # Bound pure-Python char-level sentence cadence scan on huge adversarial payloads (O(1) upper bound)
+    cadence_text = text if len(text) <= 12_000 else (text[:6_000] + "\n" + text[-6_000:])
+    sents = split_sentences(cadence_text, skip_lists=True)
+    lengths = [_sentence_length_units(s) for s in sents]
+    valid_pairs = [(s, u) for s, u in zip(sents, lengths) if u >= 3.0]
+    valid_lens = [u for _, u in valid_pairs]
+    sent_count = len(valid_lens)
+    out["sent_count"] = sent_count
+    if sent_count >= 1:
+        mean_len = sum(valid_lens) / sent_count
+        out["sent_len_mean"] = round(mean_len, 2)
+    else:
+        mean_len = 0.0
+        out["sent_len_mean"] = None
+    if sent_count >= 2 and mean_len > 0:
+        var = sum((x - mean_len) ** 2 for x in valid_lens) / sent_count
+        out["sent_len_cv"] = round(math.sqrt(var) / mean_len, 3)
+    else:
+        out["sent_len_cv"] = None
+    # Short punch count: crisp 3..12 CJK-equivalent units (e.g. 4-12 Chinese chars or 3-8 English words)
+    out["short_punch_count"] = sum(1 for u in valid_lens if 3.0 <= u <= 12.0)
+
+    all_sents = split_sentences(cadence_text, skip_lists=False)
+    openers = [k for k in (extract_opener_key(s) for s in all_sents) if k]
+    if len(openers) >= 3:
+        counts: dict[str, int] = {}
+        for k in openers:
+            counts[k] = counts.get(k, 0) + 1
+        out["opener_diversity"] = round(len(counts) / len(openers), 3)
+        out["max_opener_repeat"] = max(counts.values())
+    else:
+        out["opener_diversity"] = None
+        out["max_opener_repeat"] = max((1 for _ in openers), default=0)
     return out
+
+
+def _is_code_or_debug_exempt(content: str, prose: str, prose_code_blocks: list, mode: str, pats: dict) -> bool:
+    if mode in ("SURGICAL_EXEC", "DEBUG_RECOVERY"):
+        return True
+    non_doc_blocks = [b for lang_h, b in prose_code_blocks if lang_h not in _DOC_FENCE_LANGS]
+    if len(non_doc_blocks) >= 2:
+        return True
+    code_chars = sum(len(b) for b in non_doc_blocks)
+    if content and code_chars / max(len(content), 1) >= 0.35:
+        return True
+    if prose and pats["trace_signal"].search(prose):
+        return True
+    return False
+
+
+def _count_concrete_grounding(content: str, prose: str, code_blocks: list, pats: dict) -> int:
+    """Count concrete factual/technical grounding signals (0..4) to distinguish substantiated critique from empty snark."""
+    score = 0
+    if code_blocks or len(pats["inline_code"].findall(content or "")) >= 2:
+        score += 1
+    if pats["file_targets"].search(content or "") or pats["trace_signal"].search(content or ""):
+        score += 1
+    if pats["concrete_grounding_num"].search(prose or ""):
+        score += 1
+    if pats["concrete_grounding_causal"].search(prose or ""):
+        score += 1
+    return score
 
 
 def _has_wall_of_text(prose: str, blank_line_re) -> bool:
@@ -1722,9 +2423,15 @@ def _has_lazy_code_in_blocks(blocks: list[tuple[str, str]], pats: dict) -> bool:
 
 
 def analyze_response_smells(
-    content: str, tool_calls: list | None = None, prev_opening_sig: str = ""
+    content: str,
+    tool_calls: list | None = None,
+    prev_opening_sig: str = "",
+    *,
+    mode: str = "",
+    recent_openings: list | None = None,
+    tone: str = "peer",
 ) -> dict:
-    """Scan assistant response via orthogonal prose_stream and code_stream."""
+    """Scan assistant response via orthogonal prose_stream, code_stream, and bilingual cadence metrics."""
     pats = _get_compiled_patterns()
     prose_raw, prose_code_blocks = _split_fenced_blocks(content)
     prose = _strip_prose_noise(prose_raw, pats)
@@ -1733,98 +2440,116 @@ def analyze_response_smells(
 
     head_window = prose[:240]
     tail_window = prose[-450:] if len(prose) > 450 else prose
+    scan_prose = prose if len(prose) <= 24_000 else (prose[:12_000] + "\n" + prose[-12_000:])
     cur_opening_sig = _opening_signature(prose)
+    all_sents = split_sentences(scan_prose[:12_000], skip_lists=False) if scan_prose else []
+    cur_opening_head = extract_opener_key(all_sents[0]) if all_sents else ""
 
     smells: list[tuple[str, int]] = []
-    has_honesty = bool(prose and pats["epistemic_honesty"].search(prose))
+    has_honesty = bool(scan_prose and pats["epistemic_honesty"].search(scan_prose))
+    stance = stance_profile(scan_prose) if scan_prose else stance_profile("")
+    overcorrection_kind = ""
 
-    if prose:
-        if pats["gpt_neg_contrast_zh"].search(prose) or pats["gpt_neg_contrast_en"].search(prose):
+    if scan_prose:
+        if pats["gpt_neg_contrast_zh"].search(scan_prose) or pats["gpt_neg_contrast_en"].search(scan_prose):
             smells.append(("gpt_neg_contrast", 1))
         if pats["gpt_closing_menu_zh"].search(tail_window) or pats["gpt_closing_menu_en"].search(tail_window):
             smells.append(("gpt_closing_menu", 2))
-        has_hard_hedge = bool(pats["gpt_hedging_hard_zh"].search(prose) or pats["gpt_hedging_hard_en"].search(prose))
-        has_soft_hedge = bool(pats["gpt_hedging_soft_zh"].search(prose) or pats["gpt_hedging_soft_en"].search(prose))
+        has_hard_hedge = bool(pats["gpt_hedging_hard_zh"].search(scan_prose) or pats["gpt_hedging_hard_en"].search(scan_prose))
+        has_soft_hedge = bool(pats["gpt_hedging_soft_zh"].search(scan_prose) or pats["gpt_hedging_soft_en"].search(scan_prose))
         if has_hard_hedge or (not has_honesty and has_soft_hedge):
             smells.append(("gpt_hedging_wrapup", 1))
-        em_dashes = len(pats["em_dash"].findall(prose))
-        if pats["gpt_slop_lexicon"].search(prose) or em_dashes >= 6:
+        em_dashes = len(pats["em_dash"].findall(scan_prose))
+        if pats["gpt_slop_lexicon"].search(scan_prose) or em_dashes >= 6:
             smells.append(("gpt_slop_lexicon", 1))
-        if pats["consultant_balance"].search(prose):
+        if pats["consultant_balance"].search(scan_prose):
             smells.append(("consultant_balance", 2))
         if pats["praise_then_pivot"].search(head_window):
             smells.append(("praise_then_pivot", 1))
 
         if pats["gem_opening_flattery_zh"].search(head_window) or pats["gem_opening_flattery_en"].search(head_window):
             smells.append(("gem_opening_flattery", 2))
-        if pats["gem_hyperbole_zh"].search(prose) or pats["gem_hyperbole_en"].search(prose):
+        if pats["gem_hyperbole_zh"].search(scan_prose) or pats["gem_hyperbole_en"].search(scan_prose):
             smells.append(("gem_hyperbole", 1))
-        bang_count = len(pats["prose_bang"].findall(prose))
-        has_double_bang = ("!!" in prose) or ("！！" in prose) or ("!！" in prose) or ("！!" in prose)
-        if _has_dramatic_bold_line(prose, pats["bold_span"]) or has_double_bang or bang_count >= 4 or (bang_count >= 3 and len(prose) < 260):
+        bang_count = len(pats["prose_bang"].findall(scan_prose))
+        has_double_bang = ("!!" in scan_prose) or ("！！" in scan_prose) or ("!！" in scan_prose) or ("！!" in scan_prose)
+        if _has_dramatic_bold_line(scan_prose, pats["bold_span"]) or has_double_bang or bang_count >= 4 or (bang_count >= 3 and len(prose) < 260):
             smells.append(("gem_dramatic_bold", 1))
 
-        if pats["claude_preachy_zh"].search(prose) or pats["claude_preachy_en"].search(prose):
+        if pats["claude_preachy_zh"].search(scan_prose) or pats["claude_preachy_en"].search(scan_prose):
             smells.append(("claude_preachy", 2))
         if pats["claude_apology_pivot_zh"].search(head_window) or pats["claude_apology_pivot_en"].search(head_window):
             smells.append(("claude_apology_pivot", 2))
-        if pats["claude_solemn"].search(prose):
+        if pats["claude_solemn"].search(scan_prose):
             smells.append(("claude_solemn", 1))
 
-        if pats["grok_forced_banter"].search(prose):
+        if pats["grok_forced_banter"].search(scan_prose):
             smells.append(("grok_forced_banter", 2))
 
         if (
-            all(tok in prose for tok in ("首先，", "其次，", "最后，"))
-            and ("综上所述" in prose or "总而言之" in prose)
+            all(tok in scan_prose for tok in ("首先，", "其次，", "最后，"))
+            and ("综上所述" in scan_prose or "总而言之" in scan_prose)
             and len(prose) < 1200
         ):
             smells.append(("cn_report_scaffold", 2))
 
-        if pats["struct_copula_puffery"].search(prose):
+        idiom_hits = len(pats["cn_idiom_bureaucratese"].findall(scan_prose))
+        if idiom_hits >= 2 or pats["cn_grand_wrapup"].search(scan_prose):
+            smells.append(("cn_idiom_bureaucratese", 2))
+
+        if pats["struct_copula_puffery"].search(scan_prose):
             smells.append(("struct_copula_puffery", 1))
-        if pats["struct_participial_tail"].search(prose):
+        if pats["struct_participial_tail"].search(scan_prose):
             smells.append(("struct_participial_tail", 1))
-        if pats["academic_self_sabotage"].search(prose):
+        if pats["academic_self_sabotage"].search(scan_prose):
             smells.append(("academic_self_sabotage", 2))
 
-        if prev_opening_sig and cur_opening_sig and cur_opening_sig == prev_opening_sig:
+        # 3-turn sliding window cross-turn opener repeat (backward-compatible with single prev_opening_sig)
+        window_openings = list(recent_openings or [])
+        if not window_openings and prev_opening_sig:
+            window_openings = [{"sig": prev_opening_sig, "head": ""}]
+        sig_repeat = bool(cur_opening_sig and any(cur_opening_sig == str(e.get("sig") or "") for e in window_openings[-3:]))
+        head_repeat = bool(
+            len(cur_opening_head) >= 2
+            and sum(1 for e in window_openings[-3:] if cur_opening_head == str(e.get("head") or "")) >= 2
+        )
+        if sig_repeat or head_repeat:
             smells.append(("cross_turn_repeat", 2))
 
-        if pats["ds_prose_handwave"].search(prose):
+        if pats["ds_prose_handwave"].search(scan_prose):
             smells.append(("ds_prose_handwave", 2))
 
-        if stance_profile(prose)["transitions"] >= TRANSITION_SCAFFOLD_MIN:
+        if stance["transitions"] >= TRANSITION_SCAFFOLD_MIN:
             smells.append(("transition_scaffold", 1))
 
         if pats["meta_opening"].search(prose[:160]):
             smells.append(("meta_opening", 1))
 
-        if len(pats["md_divider"].findall(prose)) >= 2 and len(prose) < 2500:
+        if len(pats["md_divider"].findall(scan_prose)) >= 2 and len(prose) < 2500:
             smells.append(("divider_spam", 1))
 
         # Chat answered as a document: markdown headings, bold "label:" lines, or standalone bold pseudo-headers
         doc_marks = (
-            len(pats["md_heading"].findall(prose)) * 2
-            + len(pats["bold_label_line"].findall(prose))
-            + len(pats["standalone_bold_header"].findall(prose))
+            len(pats["md_heading"].findall(scan_prose)) * 2
+            + len(pats["bold_label_line"].findall(scan_prose))
+            + len(pats["standalone_bold_header"].findall(scan_prose))
         )
         if doc_marks >= 3 and len(prose) < 2500:
             smells.append(("doc_format_in_chat", 1))
 
         # Unbroken wall-of-text prose brick (per-paragraph, CJK >=320 / non-CJK >=700)
-        if _has_wall_of_text(prose, pats["blank_line"]):
+        if _has_wall_of_text(scan_prose, pats["blank_line"]):
             smells.append(("wall_of_text", 1))
 
         if pats["closing_offer"].search(prose[-320:]):
             smells.append(("closing_offer", 1))
 
-        if pats["disclaimer_boilerplate"].search(prose) or (not has_honesty and pats["disclaimer_soft"].search(prose)):
+        if pats["disclaimer_boilerplate"].search(scan_prose) or (not has_honesty and pats["disclaimer_soft"].search(scan_prose)):
             smells.append(("disclaimer_boilerplate", 1))
 
-        has_cliche = bool(pats["fence_cliche"].search(prose))
+        has_cliche = bool(pats["fence_cliche"].search(scan_prose))
         has_verdict = bool(pats["clear_verdict"].search(prose[:320]))
-        fence_hits = len(pats["fence_sitting"].findall(prose))
+        fence_hits = len(pats["fence_sitting"].findall(scan_prose))
         if has_cliche and not has_verdict:
             smells.append(("fence_sitting", 2))
         elif fence_hits >= 2 and (has_cliche or (not has_verdict and not has_honesty)):
@@ -1832,6 +2557,66 @@ def analyze_response_smells(
 
         if pats["validation_template"].search(head_window):
             smells.append(("validation_template", 1))
+
+        # v0.7 Level-2 cadence & bloodless-textbook detectors (strictly exempt on code/debug turns)
+        code_or_debug_exempt = _is_code_or_debug_exempt(content, scan_prose, prose_code_blocks, mode, pats)
+        if not code_or_debug_exempt:
+            sent_n = int(stance["sent_count"])
+            cv = stance["sent_len_cv"]
+            mean_len = stance["sent_len_mean"] or 0.0
+            opener_div = stance["opener_diversity"]
+            if sent_n >= 5 and mean_len >= 10.0 and cv is not None and cv < 0.18:
+                smells.append(("monotone_cadence", 1))
+
+            para_openers = []
+            for raw_p in pats["blank_line"].split(scan_prose):
+                p = raw_p.strip()
+                if not p or p[0] in ("-", "*", "+", "|", "#", ">"):
+                    continue
+                pk = extract_opener_key(p)
+                if pk:
+                    para_openers.append(pk)
+            para_rep = len(para_openers) >= 3 and (len(para_openers) - len(set(para_openers))) >= 2
+            max_rep = int(stance["max_opener_repeat"])
+            sent_rep = len(all_sents) >= 5 and (
+                (opener_div is not None and opener_div < 0.65)
+                or (max_rep >= 3 and (max_rep / len(all_sents)) >= 0.45)
+            )
+            if sent_rep or para_rep:
+                smells.append(("repetitive_openers", 1))
+
+            # Flat bloodless textbook/op-ed prose (exempt on calm tone & short honest disclosures;
+            # requires at least 1 explicit textbook/transition framing cue so crisp technical explanations stay clean)
+            if tone != "calm" and not (has_honesty and len(prose) < 450):
+                cjk_n = sum(1 for ch in scan_prose[:2000] if 0x4E00 <= ord(ch) <= 0x9FFF)
+                min_flat_len = 150 if cjk_n >= 40 else 420
+                zero_pulse = (
+                    stance["attitude"] == 0
+                    and stance["spoken_pivot"] == 0
+                    and stance["self_mention_singular"] == 0
+                )
+                has_textbook_scaffold = stance["textbook_frames"] >= 2 or stance["transitions"] >= 2
+                if sent_n >= 4 and len(prose) >= min_flat_len and zero_pulse and has_textbook_scaffold:
+                    dry_cues = 0
+                    if cv is not None and cv < 0.28:
+                        dry_cues += 1
+                    if stance["short_punch_count"] == 0 and "?" not in scan_prose and "？" not in scan_prose and "!" not in scan_prose and "！" not in scan_prose:
+                        dry_cues += 1
+                    if (stance["hedges"] >= 2 and stance["boosters"] == 0) or (opener_div is not None and opener_div < 0.72):
+                        dry_cues += 1
+                    if dry_cues >= 1:
+                        smells.append(("flat_textbook_voice", 1))
+
+        # Bidirectional Overcorrection Drift detector (archaisms exempted on code/debug specs; snark requires weak grounding)
+        strong_arch = len(pats["overcorrection_archaic_strong"].findall(scan_prose))
+        mild_arch = len(pats["overcorrection_archaic_mild"].findall(scan_prose))
+        is_archaic = (not code_or_debug_exempt) and (strong_arch >= 1 or (strong_arch + mild_arch) >= 2)
+        snark_hits = len(pats["overcorrection_snark"].findall(scan_prose))
+        grounding = _count_concrete_grounding(content, scan_prose, code_blocks, pats) if snark_hits else 0
+        is_snark = (snark_hits >= 1 and grounding == 0) or (snark_hits >= 2 and grounding <= 1) or snark_hits >= 3
+        if is_archaic or is_snark:
+            overcorrection_kind = "both" if (is_archaic and is_snark) else ("archaic" if is_archaic else "snark")
+            smells.append(("overcorrection_drift", 2))
 
     tool_lazy = _has_lazy_code_in_blocks(tool_code_blocks, pats)
     prose_lazy = _has_lazy_code_in_blocks(prose_code_blocks, pats)
@@ -1849,10 +2634,109 @@ def analyze_response_smells(
         "code_blocks": code_blocks,
         "prose_code_blocks": prose_code_blocks,
         "opening_sig": cur_opening_sig,
+        "opening_head": cur_opening_head,
         "tool_lazy_code": tool_lazy,
         "prose_lazy_code": prose_lazy,
         "has_honesty": has_honesty,
+        "overcorrection_kind": overcorrection_kind,
+        "stance": stance,
     }
+
+
+def extract_smell_spans(content: str, report: dict | None = None) -> list[dict]:
+    """Read-only span locator for CLI `--pretty` & HTML report highlighting (never called on hook hot path)."""
+    rep = report if report is not None else analyze_response_smells(content or "")
+    prose_full = rep.get("prose") or ""
+    prose = prose_full[:24_000]
+    active = set(rep.get("smells") or ())
+    if not prose or not active:
+        return []
+    pats = _get_compiled_patterns()
+    stance_pats = _get_stance_patterns()
+    has_honesty = bool(rep.get("has_honesty"))
+    raw_spans: list[dict] = []
+
+    def _add(smell: str, start: int, end: int) -> None:
+        if 0 <= start < end <= len(prose):
+            raw_spans.append({
+                "smell": smell,
+                "weight": SMELL_DEFAULT_WEIGHTS.get(smell, 1),
+                "start": start,
+                "end": end,
+                "snippet": prose[start:end][:120],
+            })
+
+    pattern_map = {
+        "gpt_neg_contrast": ("gpt_neg_contrast_zh", "gpt_neg_contrast_en"),
+        "gpt_closing_menu": ("gpt_closing_menu_zh", "gpt_closing_menu_en"),
+        "gpt_hedging_wrapup": ("gpt_hedging_hard_zh", "gpt_hedging_hard_en") if has_honesty else ("gpt_hedging_hard_zh", "gpt_hedging_hard_en", "gpt_hedging_soft_zh", "gpt_hedging_soft_en"),
+        "gpt_slop_lexicon": ("gpt_slop_lexicon",),
+        "consultant_balance": ("consultant_balance",),
+        "praise_then_pivot": ("praise_then_pivot",),
+        "gem_opening_flattery": ("gem_opening_flattery_zh", "gem_opening_flattery_en"),
+        "gem_hyperbole": ("gem_hyperbole_zh", "gem_hyperbole_en"),
+        "claude_preachy": ("claude_preachy_zh", "claude_preachy_en"),
+        "claude_apology_pivot": ("claude_apology_pivot_zh", "claude_apology_pivot_en"),
+        "claude_solemn": ("claude_solemn",),
+        "grok_forced_banter": ("grok_forced_banter",),
+        "cn_idiom_bureaucratese": ("cn_idiom_bureaucratese", "cn_grand_wrapup"),
+        "struct_copula_puffery": ("struct_copula_puffery",),
+        "struct_participial_tail": ("struct_participial_tail",),
+        "academic_self_sabotage": ("academic_self_sabotage",),
+        "ds_prose_handwave": ("ds_prose_handwave",),
+        "meta_opening": ("meta_opening",),
+        "divider_spam": ("md_divider",),
+        "doc_format_in_chat": ("md_heading", "bold_label_line", "standalone_bold_header"),
+        "closing_offer": ("closing_offer",),
+        "disclaimer_boilerplate": ("disclaimer_boilerplate",) if has_honesty else ("disclaimer_boilerplate", "disclaimer_soft"),
+        "fence_sitting": ("fence_cliche", "fence_sitting"),
+        "validation_template": ("validation_template",),
+        "overcorrection_drift": ("overcorrection_archaic_strong", "overcorrection_archaic_mild", "overcorrection_snark"),
+    }
+    for smell, pkeys in pattern_map.items():
+        if smell not in active:
+            continue
+        for pk in pkeys:
+            for m in pats[pk].finditer(prose):
+                _add(smell, m.start(), m.end())
+                if len(raw_spans) >= 40:
+                    break
+    if "transition_scaffold" in active:
+        for m in stance_pats["transitions"].finditer(prose):
+            _add("transition_scaffold", m.start(), m.end())
+    if "flat_textbook_voice" in active:
+        found = False
+        for m in stance_pats["textbook_frames"].finditer(prose):
+            _add("flat_textbook_voice", m.start(), m.end())
+            found = True
+        if not found:
+            _add("flat_textbook_voice", 0, min(len(prose), 80))
+    if "wall_of_text" in active:
+        _add("wall_of_text", 0, min(len(prose), 90))
+    if "monotone_cadence" in active:
+        _add("monotone_cadence", 0, min(len(prose), 80))
+    if "repetitive_openers" in active:
+        sents = split_sentences(prose, skip_lists=False)
+        keys = [extract_opener_key(s) for s in sents]
+        counts: dict[str, int] = {}
+        for k in keys:
+            if k:
+                counts[k] = counts.get(k, 0) + 1
+        cursor = 0
+        for s, k in zip(sents, keys):
+            pos = prose.find(s[:16], cursor)
+            if pos >= 0:
+                cursor = pos + len(s[:16])
+                if k and counts.get(k, 0) >= 2:
+                    _add("repetitive_openers", pos, min(len(prose), pos + max(len(k), 6)))
+
+    # Deduplicate overlapping spans (keep higher weight / earlier start)
+    raw_spans.sort(key=lambda sp: (sp["start"], -sp["weight"], -(sp["end"] - sp["start"])))
+    merged: list[dict] = []
+    for sp in raw_spans:
+        if not merged or sp["start"] >= merged[-1]["end"]:
+            merged.append(sp)
+    return merged[:24]
 
 
 def _parse_claude_or_codex_entry(entry: dict) -> tuple[str, str, list[dict]]:
@@ -2039,9 +2923,26 @@ def _extract_last_user_prompt_from_tail(host: str, tail_entries: list) -> str:
     return ""
 
 
-def format_smell_remedy(smells: list[str], lang: str) -> str:
+def _step_down_tone(tone: str) -> str:
+    return {"sharp": "peer", "peer": "calm"}.get(tone, "calm")
+
+
+def format_smell_remedy(smells: list[str], lang: str, overcorrection_kind: str = "") -> str:
     idx = 0 if lang == "zh" else 1
     valid = [s for s in smells if s in SMELL_LABELS]
+    if "overcorrection_drift" in valid:
+        kind = overcorrection_kind or "both"
+        if kind == "archaic":
+            return (
+                "[语域回拉] 上一轮漂移到了生僻古语或书面文言。回到平时说话的现代白话，用直白精准的日常技术词讲机制，别掉书袋。"
+                if lang == "zh"
+                else "[Overcorrection Brake] Prior reply drifted into archaic/stilted diction. Return to plain, modern everyday technical English—clear mechanics, zero theatrical formalism."
+            )
+        return (
+            "[语域回拉] 上一轮狠话过头且缺少硬事实兜底。收掉情绪宣泄和夸张贬损，把精力放回具体代码、数字与因果机制上，平实直说即可。"
+            if lang == "zh"
+            else "[Overcorrection Brake] Prior reply leaned into unsubstantiated snark. Dial back theatrical heat and ground every claim in concrete code, numbers, and causal mechanics."
+        )
     # Keep higher-severity smells first even if caller passes an unsorted list
     ranked = [s for _, s in sorted(enumerate(valid), key=lambda item: (-SMELL_DEFAULT_WEIGHTS.get(item[1], 1), item[0]))]
     top = ranked[:3]
@@ -2059,18 +2960,24 @@ def format_smell_remedy(smells: list[str], lang: str) -> str:
     if "closing_offer" in smell_set or "gpt_closing_menu" in smell_set:
         hints.append("说完即停不揽活" if lang == "zh" else "stop dead without closing offers")
     if "consultant_balance" in smell_set or "fence_sitting" in smell_set:
-        hints.append("第一句直接站队并给改口门槛" if lang == "zh" else "pick a clear side in Sentence 1 with a flip threshold")
+        hints.append("第一句直接站队，别凑结尾平衡尾段" if lang == "zh" else "pick a clear side in Sentence 1 with no balancing tail")
     if "praise_then_pivot" in smell_set:
         hints.append("别先夸出发点再转折" if lang == "zh" else "skip praise-then-pivot buffers")
     if "disclaimer_boilerplate" in smell_set:
         hints.append("去掉泛化免责套话" if lang == "zh" else "drop generic liability disclaimers")
+    if "monotone_cadence" in smell_set or "flat_textbook_voice" in smell_set:
+        hints.append("穿插 4-10 字短句落锤、带点真实口语体温" if lang == "zh" else "mix 3-7 word punches and real spoken warmth")
+    if "repetitive_openers" in smell_set or "cross_turn_repeat" in smell_set:
+        hints.append("换掉重复的起手句式" if lang == "zh" else "vary your opening sentence phrasing")
+    if "cn_idiom_bureaucratese" in smell_set:
+        hints.append("用大白话直讲，去掉四字公文套词" if lang == "zh" else "drop bureaucratic idioms and grand wrap-ups")
     if lang == "zh":
         joined = "、".join(descriptions)
         extra = f"（重点：{'；'.join(hints)}）" if hints else ""
-        return f"[语域纠偏] 上一轮又滑回了套路/排版惯性（{joined}）。这一轮回到熟人直说、带着对事的真态度讲清楚，第一句直接给判断{extra}。"
+        return f"[语域纠偏] 上一轮滑回了平滑套路或专栏腔（{joined}）。这一轮回到面对面熟人直聊：第一句短句直亮判断，带真态度讲透因果{extra}。"
     joined = ", ".join(descriptions)
     extra = f" (Focus: {'; '.join(hints)}.)" if hints else ""
-    return f"[Relapse Fix] Prior reply slipped into assistant habits ({joined}). Return to vivid peer prose with grounded attitude, landing Sentence 1 directly on the call.{extra}"
+    return f"[Relapse Fix] Prior reply slipped into stiff assistant/op-ed habits ({joined}). Return to spoken peer voice with short punches and grounded reaction.{extra}"
 
 
 def _emit_inject(host: str, event_name: str, text: str) -> dict:
@@ -2193,7 +3100,7 @@ def evaluate_stop_gate(
         )
         return _emit_stop(host, True, reason)
 
-    # Trailing question exempts genuine clarification asks, but NOT closing waiter offers ("Want me to write this for you?") or unapplied code dumps
+    # Trailing question exempts genuine clarification asks, but NOT closing waiter offers or unapplied code dumps
     if (
         prose.rstrip().endswith(("?", "？"))
         and not ({"closing_offer", "gpt_closing_menu"} & smells)
@@ -2235,13 +3142,114 @@ def _sync_codex_shadow_state(host: str, session_id: str, updates: dict) -> None:
         save_session_state("codex", session_id, shadow)
 
 
-def _scan_previous_turn_smells(host: str, tail_entries: list, resolved_family: str, lang: str, state: dict) -> str:
+def _has_sensitive_bootstrap_tokens(text: str) -> bool:
+    import re
+
+    raw = text or ""
+    low = raw.lower()
+    for needle in ("sk-", "ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "bearer ", "api_key", "api-key", "secret", "password", "://", "/users/", "/home/", "@", "-----begin"):
+        if needle in low:
+            return True
+    if re.search(r"\b(?:AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{10,}|xox[baprs]-[0-9A-Za-z-]{8,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,})\b", raw):
+        return True
+    if re.search(r"(?:[A-Za-z]:\\|\\\\[^\\\s]+\\|\btoken\s*[:=])", raw, re.IGNORECASE):
+        return True
+    return False
+
+
+def _capture_good_voice_anchor(
+    prose: str,
+    report: dict,
+    lang: str,
+    family: str,
+    tone: str,
+    mode: str,
+    turn_count: int,
+    policy: str,
+) -> dict | None:
+    """Capture 1-2 crisp spoken sentences from a clean, high-pulse chat turn for Self-Bootstrap recovery."""
+    if policy not in ("default", "persona") or mode not in CHAT_INTENT_MODES or tone == "calm":
+        return None
+    if report.get("score", 1) != 0 or report.get("smells") or report.get("overcorrection_kind"):
+        return None
+    if report.get("prose_code_blocks"):
+        return None
+    # Enforce strict language match between actual prose and anchor language to prevent EN<->ZH contamination
+    inferred_lang = _infer_text_language(prose)
+    if inferred_lang and inferred_lang != lang:
+        return None
+    min_len, max_len = (70, 1400) if lang == "zh" else (120, 2400)
+    if not (min_len <= len(prose) <= max_len):
+        return None
+    stance = report.get("stance") or {}
+    if int(stance.get("transitions", 0)) > 0:
+        return None
+    has_pulse = (
+        int(stance.get("attitude", 0)) >= 1
+        or int(stance.get("spoken_pivot", 0)) >= 1
+        or int(stance.get("self_mention_singular", 0)) >= 1
+    )
+    if not has_pulse:
+        return None
+    sent_n = int(stance.get("sent_count", 0))
+    cv = stance.get("sent_len_cv")
+    if sent_n >= 4 and (cv is None or cv < 0.22):
+        return None
+    if stance.get("opener_diversity") is not None and float(stance["opener_diversity"]) < 0.70:
+        return None
+    sents = split_sentences(prose, skip_lists=True)
+    if not sents:
+        return None
+    snippet = _sanitize_exemplar_text(" ".join(sents[:2]) if lang == "en" else "".join(sents[:2]))
+    cap = 140 if lang == "zh" else 220
+    snippet = snippet[:cap].strip()
+    if len(snippet) < (24 if lang == "zh" else 48) or _has_sensitive_bootstrap_tokens(snippet):
+        return None
+    return {
+        "lang": lang,
+        "family": family,
+        "tone": tone,
+        "text": snippet,
+        "entities": extract_exemplar_entities(snippet, lang, limit=5),
+        "captured_turn": turn_count,
+    }
+
+
+def _format_bootstrap_anchor(anchor: dict, lang: str) -> str:
+    txt = _sanitize_exemplar_text(str((anchor or {}).get("text") or "")).strip()
+    if not txt:
+        return ""
+    if lang == "zh":
+        return f"[声线自举] 保持你前面那股开口带劲、短句落锤的聊法（只借节奏不复用内容：「{txt}」），直接答这一轮。"
+    return f'[Voice Lock] Stay in the crisp spoken cadence you nailed earlier (rhythm only, never repeat its topic: "{txt}") and answer straight.'
+
+
+def _scan_previous_turn_smells(
+    host: str,
+    tail_entries: list,
+    resolved_family: str,
+    lang: str,
+    state: dict,
+    *,
+    tone: str = "peer",
+    policy: str = "default",
+    lang_switched: bool = False,
+) -> tuple[str, str]:
+    """Return `(remedy_text, overcorrection_kind)` and update rolling state, 3-turn openings, leak guard, and Self-Bootstrap."""
     prev_resp = _extract_previous_assistant_for_smell(host, tail_entries)
     resp_sig = prev_resp["sig"]
     if not resp_sig or resp_sig == state.get("last_scanned_resp_sig"):
-        return ""
+        return "", ""
+
+    prev_mode = str(state.get("last_mode") or "PEER_SPAR")
+    recent_openings = list(state.get("recent_openings") or [])
     report = analyze_response_smells(
-        prev_resp["content"], prev_resp["tool_calls"], str(state.get("prev_opening_sig") or "")
+        prev_resp["content"],
+        prev_resp["tool_calls"],
+        str(state.get("prev_opening_sig") or ""),
+        mode=prev_mode,
+        recent_openings=recent_openings,
+        tone=tone,
     )
     cur_score = report["score"]
     rolling = cur_score + (1 if state.get("rolling_smell_score", 0) >= 1 and cur_score >= 1 else 0)
@@ -2249,21 +3257,88 @@ def _scan_previous_turn_smells(host: str, tail_entries: list, resolved_family: s
     state["rolling_smell_score"] = cur_score
     if report["opening_sig"]:
         state["prev_opening_sig"] = report["opening_sig"]
+    if report["opening_sig"] or report.get("opening_head"):
+        recent_openings.append({"sig": report["opening_sig"], "head": report.get("opening_head", "")})
+        state["recent_openings"] = recent_openings[-3:]
+
+    # Exemplar entity-leak guard: compare against the Turn N-1 prompt that was active when the exemplar was injected
+    last_ex_id = str(state.get("last_exemplar_id") or "")
+    last_ex_ents = list(state.get("last_exemplar_entities") or [])
+    if last_ex_id and last_ex_ents:
+        resp_low = (report.get("prose") or "").lower()
+        ex_prompt_low = str(state.get("last_exemplar_prompt") or "").lower()
+        leaked = [t for t in last_ex_ents if len(t) >= 2 and t.lower() in resp_low and t.lower() not in ex_prompt_low]
+        if leaked:
+            blocked = list(state.get("blocked_exemplar_ids") or [])
+            if last_ex_id not in blocked:
+                blocked.append(last_ex_id)
+                state["blocked_exemplar_ids"] = blocked[-16:]
+        state["last_exemplar_id"] = ""
+        state["last_exemplar_entities"] = []
+        state["last_exemplar_prompt"] = ""
+
     if resolved_family == "generic":
         guessed = infer_family_from_smells(report["smells"])
         if guessed:
             state["inferred_family"] = guessed
+
+    effective_fam_for_anchor = (
+        str(state["inferred_family"])
+        if (resolved_family == "generic" and state.get("inferred_family") in VALID_FAMILIES)
+        else resolved_family
+    )
+
+    overcorr_kind = str(report.get("overcorrection_kind") or "")
+    if overcorr_kind:
+        state["good_voice_anchor"] = None
+        stepped = _step_down_tone(tone)
+        state["soft_tone_override"] = {"tone": stepped, "remaining_turns": 2, "reason": overcorr_kind}
+    elif not state.get("soft_tone_override") and not lang_switched:
+        existing_anchor = state.get("good_voice_anchor")
+        same_bucket = (
+            isinstance(existing_anchor, dict)
+            and existing_anchor.get("lang") == lang
+            and existing_anchor.get("family") == effective_fam_for_anchor
+            and existing_anchor.get("tone") == tone
+        )
+        if not same_bucket:
+            captured = _capture_good_voice_anchor(
+                report.get("prose") or "",
+                report,
+                lang,
+                effective_fam_for_anchor,
+                tone,
+                prev_mode,
+                int(state.get("turn_count", 0)),
+                policy,
+            )
+            if captured is not None:
+                state["good_voice_anchor"] = captured
+
     if rolling >= 2 and resp_sig != state.get("last_warned_resp_sig"):
         state["last_warned_resp_sig"] = resp_sig
-        return format_smell_remedy(report["smells"], lang)
-    return ""
+        return format_smell_remedy(report["smells"], lang, overcorrection_kind=overcorr_kind), overcorr_kind
+    return "", overcorr_kind
+
+
+def _custom_has_exemplar_for(cfg: dict, lang: str, tone: str) -> bool:
+    custom = cfg.get("voice_exemplars") or {}
+    if not isinstance(custom, dict):
+        return False
+    for key in (tone, "any"):
+        bucket = custom.get(key)
+        if isinstance(bucket, dict) and isinstance(bucket.get(lang), list) and len(bucket[lang]) > 0:
+            return True
+    return False
 
 
 def _append_turn_mode_and_anchors(
     inject_lines: list[str],
     *,
+    cfg: dict,
     host: str,
     effective_family: str,
+    effective_tone: str,
     lang: str,
     active_mode: str,
     prev_mode: str,
@@ -2273,42 +3348,121 @@ def _append_turn_mode_and_anchors(
     config_changed: bool,
     lang_switched: bool,
     smell_remedy: str,
+    overcorrection_kind: str,
+    raw_user_input: str,
+    policy: str,
     state: dict,
 ) -> None:
-    refresh_due = (
-        not smell_remedy
-        and active_mode in CHAT_INTENT_MODES
-        and next_turn_count >= 5
-        and next_turn_count % 5 == 0
-    )
+    is_chat = active_mode in CHAT_INTENT_MODES
+    refresh_due = not smell_remedy and is_chat and next_turn_count >= 5 and next_turn_count % 5 == 0
     mode_changed = active_mode != prev_mode
+    is_first_turn = next_turn_count == 1
+    reanchored = need_baseline or model_switched or config_changed or lang_switched
+    allow_samples = is_chat and policy in ("default", "persona") and not overcorrection_kind
+
+    def _emit_voice_sample() -> bool:
+        if not allow_samples:
+            return False
+        entry = _select_voice_exemplar(
+            cfg,
+            lang,
+            effective_tone,
+            active_mode,
+            prompt=raw_user_input,
+            used_ids=state.get("used_exemplar_ids"),
+            blocked_ids=state.get("blocked_exemplar_ids"),
+        )
+        if not entry:
+            return False
+        block = format_voice_exemplar_block(entry, lang)
+        if not block:
+            return False
+        inject_lines.append(block)
+        used = list(state.get("used_exemplar_ids") or [])
+        used.append(str(entry.get("id") or ""))
+        state["used_exemplar_ids"] = used[-6:]
+        state["last_exemplar_id"] = str(entry.get("id") or "")
+        state["last_exemplar_entities"] = extract_exemplar_entities(
+            entry.get("text", ""), lang, entry.get("topic_terms"), limit=6
+        )
+        state["last_exemplar_prompt"] = (raw_user_input or "")[:500]
+        state["last_exemplar_turn"] = next_turn_count
+        return True
+
+    def _can_use_bootstrap() -> bool:
+        anchor = state.get("good_voice_anchor")
+        return (
+            allow_samples
+            and not _custom_has_exemplar_for(cfg, lang, effective_tone)
+            and isinstance(anchor, dict)
+            and anchor.get("lang") == lang
+            and anchor.get("family") == effective_family
+            and anchor.get("tone") == effective_tone
+            and bool(anchor.get("text"))
+        )
+
+    emitted_mode_or_anchor = False
     if host in ("claude", "codex"):
-        is_first_turn = next_turn_count == 1
-        reanchored = need_baseline or model_switched or config_changed or lang_switched
         expressive_or_debug = active_mode in ("EXPLAIN_DEEP", "CRITIQUE_OPINION", "EMPATHY_VENT", "DEBUG_RECOVERY")
         if is_first_turn or mode_changed or expressive_or_debug or reanchored:
             inject_lines.append(MODE_DIRECTIVES[active_mode][lang])
-        if active_mode in CHAT_INTENT_MODES:
+            emitted_mode_or_anchor = True
+        if is_chat:
             if effective_family == "deepseek":
-                inject_lines.append(WIRE_ANCHORS["deepseek"][lang])
+                ds_idx = (next_turn_count - 1) % len(DS_WIRE_VARIANTS)
+                inject_lines.append(DS_WIRE_VARIANTS[ds_idx][lang])
+                emitted_mode_or_anchor = True
             elif is_first_turn and not reanchored:
                 inject_lines.append(WIRE_ANCHORS[effective_family][lang])
+                emitted_mode_or_anchor = True
     else:
         injected_prev_mode = str(state.get("injected_agy_mode") or "")
         if need_baseline:
             if active_mode != "PEER_SPAR":
                 inject_lines.append(MODE_DIRECTIVES[active_mode][lang])
                 state["injected_agy_mode"] = active_mode
+                emitted_mode_or_anchor = True
         elif mode_changed or lang_switched or (bool(injected_prev_mode) and active_mode != injected_prev_mode):
             if active_mode != "PEER_SPAR" or mode_changed or bool(injected_prev_mode):
                 inject_lines.append(MODE_DIRECTIVES[active_mode][lang])
+                emitted_mode_or_anchor = True
             state["injected_agy_mode"] = "" if active_mode == "PEER_SPAR" else active_mode
-        if effective_family == "deepseek" and active_mode in CHAT_INTENT_MODES:
-            inject_lines.append(WIRE_ANCHORS["deepseek"][lang])
+        if is_chat:
+            if effective_family == "deepseek":
+                ds_idx = (next_turn_count - 1) % len(DS_WIRE_VARIANTS)
+                inject_lines.append(DS_WIRE_VARIANTS[ds_idx][lang])
+                emitted_mode_or_anchor = True
+            elif is_first_turn and not reanchored:
+                inject_lines.append(WIRE_ANCHORS[effective_family][lang])
+                emitted_mode_or_anchor = True
 
-    if refresh_due:
-        variant_idx = ((next_turn_count // 5) - 1) % len(LONG_SESSION_REFRESH_VARIANTS)
-        inject_lines.append(LONG_SESSION_REFRESH_VARIANTS[variant_idx][lang])
+    # Attach 1 orthogonal voice sample or Self-Bootstrap anchor at high-leverage penetration points
+    last_ex_turn = int(state.get("last_exemplar_turn", 0))
+    if is_first_turn and allow_samples:
+        _emit_voice_sample()
+    elif smell_remedy and allow_samples:
+        if _can_use_bootstrap():
+            inject_lines.append(_format_bootstrap_anchor(state["good_voice_anchor"], lang))
+        else:
+            _emit_voice_sample()
+    elif refresh_due:
+        r_idx = int(state.get("refresh_idx", 0))
+        inject_lines.append(LONG_SESSION_REFRESH_VARIANTS[r_idx % len(LONG_SESSION_REFRESH_VARIANTS)][lang])
+        state["refresh_idx"] = r_idx + 1
+        if _can_use_bootstrap():
+            inject_lines.append(_format_bootstrap_anchor(state["good_voice_anchor"], lang))
+        elif allow_samples:
+            _emit_voice_sample()
+    elif need_baseline and next_turn_count > 1 and _can_use_bootstrap():
+        # Post-PreCompact recovery: restore the session's own verified spoken cadence
+        inject_lines.append(_format_bootstrap_anchor(state["good_voice_anchor"], lang))
+    elif mode_changed and allow_samples and (next_turn_count - last_ex_turn) >= 2:
+        _emit_voice_sample()
+    elif is_chat and not is_first_turn and not reanchored and not smell_remedy and not emitted_mode_or_anchor:
+        # Turn 2+ steady chat anti-dilution: 1 compact rotating perspective line (~20 tokens, zero cache loss)
+        seed = int(state.get("session_seed", 0))
+        p_idx = (next_turn_count + seed) % len(PERSPECTIVE_MICRO_ANCHORS)
+        inject_lines.append(PERSPECTIVE_MICRO_ANCHORS[p_idx][lang])
 
 
 def process_event(payload: dict, config: dict | None = None) -> dict:
@@ -2329,6 +3483,18 @@ def process_event(payload: dict, config: dict | None = None) -> dict:
         return _pass_through()
 
     state = load_session_state(host, session_id)
+    # When Claude-only lifecycle events fire alongside a fresher codex:<sid> state (e.g. ambient CODEX_HOME or
+    # turn_id-routed UserPromptSubmit), inherit the fresher codex:<sid> state so flow_bypass, lang, and model_family stay intact.
+    if host == "claude" and event_name in ("PreCompact", "PostModelSwitch") and os.path.isfile(_session_state_path("codex", session_id)):
+        codex_state = load_session_state("codex", session_id)
+        claude_exists = os.path.isfile(_session_state_path("claude", session_id))
+        if (
+            not claude_exists
+            or int(codex_state.get("turn_count", 0)) > int(state.get("turn_count", 0))
+            or int(codex_state.get("updated_at", 0)) > int(state.get("updated_at", 0))
+        ):
+            state = codex_state
+
     if state.get("flow_bypass") or state.get("sticky_role_policy") == "skip" or should_bypass_session(session_id, clean_input, cfg, system_text):
         if _hits_prompt_or_system_bypass(clean_input, cfg, system_text) and not state.get("flow_bypass"):
             state["flow_bypass"] = True
@@ -2342,7 +3508,8 @@ def process_event(payload: dict, config: dict | None = None) -> dict:
         return _pass_through()
 
     if event_name == "PreCompact":
-        reset = {"session_initialized": False, "injected_agy_mode": ""}
+        # Preserve good_voice_anchor, recent_openings, and refresh_idx across compaction; drop stale soft_tone_override
+        reset = {"session_initialized": False, "injected_agy_mode": "", "soft_tone_override": None}
         state.update(reset)
         save_session_state(host, session_id, state)
         _sync_codex_shadow_state(host, session_id, reset)
@@ -2371,10 +3538,18 @@ def process_event(payload: dict, config: dict | None = None) -> dict:
         invocation_num = int(payload.get("invocationNum") or 0)
     except Exception:
         invocation_num = 0
+    cur_t_size = -1
+    if transcript_path:
+        try:
+            cur_t_size = os.path.getsize(transcript_path)
+        except OSError:
+            cur_t_size = -1
+    transcript_unchanged = (cur_t_size < 0) or (int(state.get("last_transcript_size", -1)) == cur_t_size)
     if (
         host == "antigravity"
         and event_name == "PreInvocation"
         and invocation_num > 1
+        and transcript_unchanged
         and state.get("session_initialized")
         and state.get("epoch") == cfg["epoch"]
         and state.get("tone") == cfg["tone"]
@@ -2429,7 +3604,7 @@ def process_event(payload: dict, config: dict | None = None) -> dict:
             return {}
         effective_fam = str(state["inferred_family"]) if (resolved_family == "generic" and state.get("inferred_family") in VALID_FAMILIES) else resolved_family
         parts = []
-        if host in ("claude", "codex") and not lean:
+        if (host in ("claude", "codex") or (host == "antigravity" and lang == "zh")) and not lean:
             parts.append(STANDALONE_BASELINE[lang])
         parts.append(directive_for(cfg, effective_fam, lang))
         if not lean:
@@ -2454,6 +3629,13 @@ def process_event(payload: dict, config: dict | None = None) -> dict:
             "model_family": resolved_family, "inferred_family": "", "raw_model": raw_model,
             "last_role_policy": policy,
         }
+        if resolved_family != prev_fam:
+            pms_update.update({
+                "good_voice_anchor": None,
+                "recent_openings": [],
+                "prev_opening_sig": "",
+                "soft_tone_override": None,
+            })
         state.update(pms_update)
         save_session_state(host, session_id, state)
         _sync_codex_shadow_state(host, session_id, pms_update)
@@ -2472,27 +3654,86 @@ def process_event(payload: dict, config: dict | None = None) -> dict:
             )
         prev_mode = str(state.get("last_mode") or "PEER_SPAR")
         active_mode = classify_intent(raw_user_input, prev_mode) if is_new_turn else prev_mode
-        smell_remedy = _scan_previous_turn_smells(host, tail_entries, resolved_family, lang, state) if (is_new_turn and tail_entries) else ""
 
-        effective_family = str(state["inferred_family"]) if (resolved_family == "generic" and state.get("inferred_family") in VALID_FAMILIES) else resolved_family
         need_baseline = not state.get("session_initialized")
         lang_switched = bool(_infer_text_language(clean_input)) and not _is_language_neutral_turn(clean_input) and bool(state.get("lang")) and (lang != state.get("lang"))
         config_changed = (state.get("epoch") != cfg["epoch"]) or (state.get("tone") != cfg["tone"]) or (str(state.get("overlay_sig", "")) != overlay_sig)
+        if config_changed:
+            state["good_voice_anchor"] = None
+            state["soft_tone_override"] = None
+        if lang_switched:
+            state["good_voice_anchor"] = None
+
+        # Detect model-family switch BEFORE scanning prior model's reply so a new model never inherits
+        # the previous model's overcorrection brake, opener history, or Self-Bootstrap anchor
+        pre_effective_family = str(state["inferred_family"]) if (resolved_family == "generic" and state.get("inferred_family") in VALID_FAMILIES) else resolved_family
+        switched_from_prev_model = bool(state.get("model_family")) and pre_effective_family != state.get("model_family")
+        if switched_from_prev_model:
+            state.update({
+                "good_voice_anchor": None,
+                "recent_openings": [],
+                "prev_opening_sig": "",
+                "soft_tone_override": None,
+                "last_exemplar_id": "",
+                "last_exemplar_entities": [],
+                "last_exemplar_prompt": "",
+                "inferred_family": "",
+            })
+
+        soft_ov = state.get("soft_tone_override") if isinstance(state.get("soft_tone_override"), dict) else None
+        active_tone = str(soft_ov.get("tone")) if (soft_ov and soft_ov.get("tone") in VALID_TONES) else cfg["tone"]
+
+        smell_remedy, overcorr_kind = (
+            _scan_previous_turn_smells(
+                host,
+                tail_entries,
+                resolved_family,
+                lang,
+                state,
+                tone=active_tone,
+                policy=policy,
+                lang_switched=lang_switched,
+            )
+            if (is_new_turn and tail_entries and not switched_from_prev_model)
+            else ("", "")
+        )
+
+        # Decrement active soft_tone_override on clean subsequent turns; emit restoration tone when it expires
+        tone_restored = False
+        if is_new_turn and not overcorr_kind and isinstance(state.get("soft_tone_override"), dict):
+            rem = int(state["soft_tone_override"].get("remaining_turns", 0)) - 1
+            if rem <= 0:
+                prev_ov_tone = str(state["soft_tone_override"].get("tone") or "")
+                state["soft_tone_override"] = None
+                if prev_ov_tone and prev_ov_tone != cfg["tone"]:
+                    tone_restored = True
+            else:
+                state["soft_tone_override"]["remaining_turns"] = rem
+
+        # Re-read soft override after scan + decrement
+        soft_ov_after = state.get("soft_tone_override") if isinstance(state.get("soft_tone_override"), dict) else None
+        effective_tone = str(soft_ov_after.get("tone")) if (soft_ov_after and soft_ov_after.get("tone") in VALID_TONES) else cfg["tone"]
+
+        effective_family = str(state["inferred_family"]) if (resolved_family == "generic" and state.get("inferred_family") in VALID_FAMILIES) else resolved_family
         model_switched = effective_family != state.get("model_family")
 
         inject_lines: list[str] = []
-        if (need_baseline or lang_switched) and host in ("claude", "codex") and not lean:
+        if (need_baseline or lang_switched) and (host in ("claude", "codex") or (host == "antigravity" and lang == "zh")) and not lean:
             inject_lines.append(STANDALONE_BASELINE[lang])
         if need_baseline or model_switched or config_changed or lang_switched:
             inject_lines.append(directive_for(cfg, effective_family, lang))
             if (need_baseline or config_changed or lang_switched) and not lean:
-                inject_lines.append(TONE_ADDENDA[cfg["tone"]][lang])
+                inject_lines.append(TONE_ADDENDA[effective_tone][lang])
                 if host == "antigravity" and lang == "zh":
                     inject_lines.append(ANTIGRAVITY_ZH_MIRROR)
             if need_baseline or config_changed or lang_switched:
                 inject_lines.extend(_baseline_extras())
         if smell_remedy and not lean:
             inject_lines.append(smell_remedy)
+            if overcorr_kind and effective_tone != active_tone and not (need_baseline or config_changed or lang_switched):
+                inject_lines.append(TONE_ADDENDA[effective_tone][lang])
+        elif tone_restored and not lean and not (need_baseline or config_changed or lang_switched):
+            inject_lines.append(TONE_ADDENDA[effective_tone][lang])
         if is_new_turn and is_epistemic_challenge(raw_user_input):
             inject_lines.append(CHALLENGE_DIRECTIVES[lang])
 
@@ -2500,17 +3741,30 @@ def process_event(payload: dict, config: dict | None = None) -> dict:
         if is_new_turn and not lean:
             _append_turn_mode_and_anchors(
                 inject_lines,
-                host=host, effective_family=effective_family, lang=lang, active_mode=active_mode,
-                prev_mode=prev_mode, next_turn_count=next_turn_count, need_baseline=need_baseline,
-                model_switched=model_switched, config_changed=config_changed, lang_switched=lang_switched,
-                smell_remedy=smell_remedy, state=state,
+                cfg=cfg,
+                host=host,
+                effective_family=effective_family,
+                effective_tone=effective_tone,
+                lang=lang,
+                active_mode=active_mode,
+                prev_mode=prev_mode,
+                next_turn_count=next_turn_count,
+                need_baseline=need_baseline,
+                model_switched=model_switched,
+                config_changed=config_changed,
+                lang_switched=lang_switched,
+                smell_remedy=smell_remedy,
+                overcorrection_kind=overcorr_kind,
+                raw_user_input=raw_user_input,
+                policy=policy,
+                state=state,
             )
 
         state.update(
             {
                 "epoch": cfg["epoch"], "tone": cfg["tone"], "overlay_sig": overlay_sig, "lang": lang,
                 "model_family": effective_family, "raw_model": raw_model, "session_initialized": True,
-                "last_role_policy": policy,
+                "last_role_policy": policy, "last_transcript_size": cur_t_size,
             }
         )
         if is_new_turn:

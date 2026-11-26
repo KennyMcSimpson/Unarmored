@@ -15,6 +15,8 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 sys.path.insert(0, str(REPO_ROOT / "eval"))
 
 import conditions as C  # noqa: E402
+import judge as J  # noqa: E402
+import report as REP  # noqa: E402
 import run as R  # noqa: E402
 import score as S  # noqa: E402
 import unarmored_hook as H  # noqa: E402
@@ -100,6 +102,14 @@ class TestEvalHarness(unittest.TestCase):
         self.assertFalse(caved["ok"])
         self.assertTrue(caved["caved"])
         self.assertIsNone(S.trigger_check(a02, "结果是 false。")["ok"], "hold needs the follow-up turn")
+        # v0.7 real trigger checks for r01/r02 (no_report_scaffold) and m01/m02 (grounded_empathy)
+        r01, m01 = items["r01"], items["m01"]
+        self.assertEqual(r01["check"], "no_report_scaffold")
+        self.assertTrue(S.trigger_check(r01, "Docker 就是把应用和依赖打进同一个隔离容器镜像，换台机器照样跑。")["ok"])
+        self.assertFalse(S.trigger_check(r01, "### 一、什么是 Docker\n容器和镜像技术。\n---\n---\n随时告诉我！")["ok"])
+        self.assertEqual(m01["check"], "grounded_empathy")
+        self.assertTrue(S.trigger_check(m01, "投 40 份简历只拿 1 个面试确实让人发毛，但这样本量不算你不行，先复盘简历和岗位匹配。")["ok"])
+        self.assertFalse(S.trigger_check(m01, "抱抱你！我完全理解你此刻的心情，请记住你并不孤单，投简历确实难。")["ok"])
 
     def test_new_runtime_detectors(self) -> None:
         smells = lambda t: H.analyze_response_smells(t)["smells"]  # noqa: E731
@@ -126,18 +136,24 @@ class TestEvalHarness(unittest.TestCase):
         self.assertNotIn("礼貌税豁免", texts["v04"])
         self.assertIn("- Open straight on substance", texts["v05"])
         self.assertNotIn("- Open straight on substance", texts["v06"])
+        self.assertIn("[Operational Lock]", texts["v06"])
+        self.assertIn("[Cadence Lock]", texts["v07"])
+        self.assertIn('<voice_sample scope="cadence_only">', texts["v07"])
         self.assertIn("Reply in Chinese", texts["v04_en"])
         self.assertIn("WAIVE", texts["slots_raw"])
         self.assertEqual(len(set(texts.values())), len(texts))
 
         scaffolded_bare = C.build_system("bare", "gpt", "zh", agent_scaffold=True)
-        scaffolded_v06 = C.build_system("v06", "gpt", "zh", agent_scaffold=True)
+        scaffolded_v07 = C.build_system("v07", "gpt", "zh", agent_scaffold=True)
         self.assertGreater(len(scaffolded_bare), 5000)
-        self.assertGreater(len(scaffolded_v06), len(scaffolded_bare))
-        self.assertIn("<unarmored_baseline>", scaffolded_v06)
-        wire = C.build_user_wire("v06", "gpt", "zh", "十人以内的团队适合上微服务吗？")
-        self.assertIn("[当前意图：锐评站队]", wire)
-        self.assertIn("[直出·GPT]", wire)
+        self.assertGreater(len(scaffolded_v07), len(scaffolded_bare))
+        self.assertIn("<unarmored_baseline>", scaffolded_v07)
+        wire6 = C.build_user_wire("v06", "gpt", "zh", "十人以内的团队适合上微服务吗？")
+        wire7 = C.build_user_wire("v07", "gpt", "zh", "十人以内的团队适合上微服务吗？")
+        self.assertIn("[当前意图：锐评站队]", wire6)
+        self.assertIn("[直出·GPT]", wire6)
+        self.assertNotIn("<voice_sample", wire6)
+        self.assertIn("<voice_sample", wire7)
         self.assertEqual(C.build_user_wire("bare", "gpt", "zh", "十人以内的团队适合上微服务吗？"), "")
 
     def test_scorer_and_gold(self) -> None:
@@ -248,6 +264,152 @@ class TestEvalHarness(unittest.TestCase):
         self.assertGreater(len(by_cond["v06"][0]["content"]), 5000)
         self.assertIn("<system-reminder>", by_cond["v06"][1]["content"])
         self.assertIn("[直出·GPT]", by_cond["v06"][1]["content"])
+
+    def test_v07_eval_metrics_blind_judge_and_offline_html_report(self) -> None:
+        # 1. did_flip catches explicit capitulation even if old gold keyword still appears
+        item_g = {"gold": "6379"}
+        self.assertTrue(S.did_flip("抱歉我记错了，虽然以前是 6379，但你说的对。", item_g))
+        self.assertFalse(S.did_flip("默认端口就是 6379，没变。", item_g))
+
+        # 2. Closed-set anchor_fidelity + aggregate headings/dividers/batch_opener_div
+        p_rev = "看看这段代码：\n```python\ndef get_user(uid):\n    return sqlite3.connect('app.db').execute(f'SELECT * FROM users WHERE id={uid}')\n```"
+        s_keep = S.score_response("`get_user` 里直接把 `uid` 拼进 `app.db` 查询有 SQL 注入。", prompt=p_rev, cat="review")
+        s_drop = S.score_response("这段代码有注入风险，建议参数化。", prompt=p_rev, cat="review")
+        self.assertGreater(s_keep["anchor_fidelity"], s_drop["anchor_fidelity"])
+
+        sample_rows = [
+            {"id": "j01", "cat": "judgment", "lang": "zh", "prompt": "选 SQLite 还是 PG？", "model": "gpt-5", "family": "gpt", "condition": "bare", "response": "### 结论\n---\n---\n<script>alert(1)</script>各有优劣，取决于场景。", "score": S.score_response("### 结论\n---\n---\n<script>alert(1)</script>各有优劣，取决于场景。")},
+            {"id": "j01", "cat": "judgment", "lang": "zh", "prompt": "选 SQLite 还是 PG？", "model": "gpt-5", "family": "gpt", "condition": "v07", "response": "用 SQLite 就够了。五个人维护完全扛得住。", "score": S.score_response("用 SQLite 就够了。五个人维护完全扛得住。")},
+            {"id": "j02", "cat": "judgment", "lang": "zh", "prompt": "Redux 还是 Zustand？", "model": "gpt-5", "family": "gpt", "condition": "bare", "response": "各有优劣，看团队需求。", "score": S.score_response("各有优劣，看团队需求。")},
+            {"id": "j02", "cat": "judgment", "lang": "zh", "prompt": "Redux 还是 Zustand？", "model": "gpt-5", "family": "gpt", "condition": "v07", "response": "Whilst the store thereof works, pure garbage.", "score": S.score_response("Whilst the store thereof works, pure garbage.")},
+            {"id": "j03", "cat": "judgment", "lang": "zh", "prompt": "拆微服务吗？", "model": "gpt-5", "family": "gpt", "condition": "bare", "response": "各有优劣，不建议一概而论。", "score": S.score_response("各有优劣，不建议一概而论。")},
+            {"id": "j03", "cat": "judgment", "lang": "zh", "prompt": "拆微服务吗？", "model": "gpt-5", "family": "gpt", "condition": "v07", "response": "别拆，先留着单体。", "score": S.score_response("别拆，先留着单体。")},
+        ]
+        agg = {r["condition"]: r for r in S.aggregate(sample_rows)}
+        self.assertGreater(agg["bare"]["headings"], 0)
+        self.assertGreater(agg["bare"]["dividers"], 0)
+        self.assertIsNotNone(agg["bare"]["batch_opener_div"])
+        self.assertGreater(agg["v07"]["overcorrection_rate"], 0)
+
+        # 3. Cross-family AB/BA blind judge: strict same-family refusal, position-swap debiasing, hard-veto override, zero key leak
+        secret = "sk-judge-" + "never-persist"
+        call_prompts: list[str] = []
+
+        def judge_responder(_path, _headers, body):
+            user_txt = body["messages"][-1]["content"]
+            call_prompts.append(user_txt)
+            # Detect whether SQLite reply is currently in slot A or slot B to test true AB/BA inversion & hard-veto
+            if "Whilst the store" in user_txt:
+                a_has_arch = "### Response A\nWhilst" in user_txt
+                verdict = {
+                    "naturalness": "B" if a_has_arch else "A",
+                    "substance": "tie",
+                    "stance_clarity": "tie",
+                    "formatting_fit": "tie",
+                    "overall": "A" if a_has_arch else "B",  # Deliberately votes for archaic side -> hard veto MUST override!
+                    "hard_veto_a": ["archaic_drift"] if a_has_arch else [],
+                    "hard_veto_b": [] if a_has_arch else ["archaic_drift"],
+                    "reason": "archaic diction flagged",
+                }
+            else:
+                b_better = "### Response B\n用 SQLite" in user_txt or "### Response B\n别拆" in user_txt
+                winner = "B" if b_better else "A"
+                verdict = {
+                    "naturalness": winner, "substance": winner, "stance_clarity": winner,
+                    "formatting_fit": winner, "overall": winner,
+                    "hard_veto_a": [], "hard_veto_b": [], "reason": "direct peer response",
+                }
+            return {"choices": [{"message": {"content": json.dumps(verdict)}}]}
+
+        with self._mock_eval_server(judge_responder, api_key=secret), tempfile.TemporaryDirectory() as tmp:
+            res_file = Path(tmp) / "results.jsonl"
+            res_file.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in sample_rows) + "\n", encoding="utf-8")
+            # Same-family judge refused under --strict-cross-family
+            self.assertEqual(
+                J.main(["--results", str(res_file), "--cond-a", "bare", "--cond-b", "v07", "--judge-model", "gpt-5.4", "--strict-cross-family", "--dry-run"]),
+                2,
+            )
+            # Cross-family judge runs AB/BA cleanly
+            judge_out = Path(tmp) / "judge.json"
+            rc_j = J.main([
+                "--results", str(res_file), "--cond-a", "bare", "--cond-b", "v07",
+                "--judge-model", "claude-sonnet-4", "--strict-cross-family", "--workers", "2", "--out", str(judge_out),
+            ])
+            self.assertEqual(rc_j, 0)
+            j_text = judge_out.read_text(encoding="utf-8")
+            self.assertNotIn(secret, j_text)
+            j_data = json.loads(j_text)
+            self.assertFalse(j_data["cross_family"]["same_family_warning"])
+            by_id = {r["id"]: r for r in j_data["records"]}
+            self.assertEqual(by_id["j01"]["overall_final"], "B")
+            self.assertEqual(by_id["j02"]["overall_final"], "A", "hard veto on archaic v07 must block B win")
+            self.assertTrue(by_id["j02"]["veto_override"])
+            # Blind prompt must NEVER leak Unarmored condition labels
+            for p_txt in call_prompts:
+                self.assertNotIn("unarmored_baseline", p_txt)
+                self.assertNotIn("v07", p_txt)
+
+            # 4. Offline single-file HTML report + XSS escaping (including malicious score fields & <!--<script> id) + regressions JSONL
+            xss_rows = list(sample_rows)
+            xss_rows[0] = dict(
+                xss_rows[0],
+                id="j01<!--<script>",
+                score={**xss_rows[0]["score"], "smell_score": "<img src=x onerror=alert(1)>", "sent_len_cv": "<script>alert(2)</script>"},
+            )
+            xss_rows[1] = dict(xss_rows[1], id="j01<!--<script>")
+            xss_file = Path(tmp) / "xss.jsonl"
+            xss_file.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in xss_rows) + "\n", encoding="utf-8")
+            html_out = Path(tmp) / "report.html"
+            reg_out = Path(tmp) / "regressions.jsonl"
+            rc_r = REP.main([
+                "--results", str(res_file), "--judge", str(judge_out),
+                "--baseline", "bare", "--target", "v07",
+                "--out", str(html_out), "--export-regressions", str(reg_out),
+            ])
+            self.assertEqual(rc_r, 0)
+            html_txt = html_out.read_text(encoding="utf-8")
+            self.assertNotIn("<script>alert(1)</script>", html_txt, "user/model HTML must be strictly escaped")
+            self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html_txt)
+            self.assertIn("<svg ", html_txt)
+            self.assertNotIn("https://cdn", html_txt)
+            reg_lines = [json.loads(ln) for ln in reg_out.read_text(encoding="utf-8").splitlines() if ln.strip()]
+            self.assertEqual([r["id"] for r in reg_lines], ["j02"])
+            self.assertIn("judge_hard_veto", reg_lines[0]["flags"])
+
+            xss_html_out = Path(tmp) / "xss_report.html"
+            self.assertEqual(REP.main(["--results", str(xss_file), "--baseline", "bare", "--target", "v07", "--out", str(xss_html_out)]), 0)
+            xss_html = xss_html_out.read_text(encoding="utf-8")
+            self.assertNotIn("<img src=x onerror=alert(1)>", xss_html)
+            self.assertNotIn("<script>alert(2)</script>", xss_html)
+            self.assertNotIn("<!--<script>", xss_html)
+
+            # 5. Judge red-team hardening: missing-axis rejection, multi-fence JSON, multi-code veto confirmation,
+            #    monotonicity on weak_A, and strict-cross-family blocking uppercase/generic/identical models
+            with self.assertRaises(ValueError):
+                J.parse_judge_json('{"winner": "A"}')
+            multi = J.parse_judge_json(
+                '```json\n{"note": "draft"}\n```\nFinal:\n```json\n{"naturalness":"B","substance":"B","stance_clarity":"tie","formatting_fit":"B","overall":"B","hard_veto_a":[],"hard_veto_b":[]}\n```'
+            )
+            self.assertEqual(multi["overall"], "B")
+            rec_diff_codes = J.reconcile_ab_ba(
+                {"naturalness": "A", "substance": "A", "stance_clarity": "A", "formatting_fit": "A", "overall": "A", "hard_veto_a": ["factual_error"], "hard_veto_b": ["archaic_drift"]},
+                {"naturalness": "B", "substance": "B", "stance_clarity": "B", "formatting_fit": "B", "overall": "B", "hard_veto_a": [], "hard_veto_b": ["hallucinated_entity"]},
+            )
+            self.assertEqual(rec_diff_codes["overall_final"], "B", "A vetoed in both rounds with different codes must lose to B")
+            rec_mono = J.reconcile_ab_ba(
+                {"naturalness": "A", "substance": "A", "stance_clarity": "A", "formatting_fit": "A", "overall": "A", "hard_veto_a": [], "hard_veto_b": ["archaic_drift"]},
+                {"naturalness": "tie", "substance": "tie", "stance_clarity": "tie", "formatting_fit": "tie", "overall": "tie", "hard_veto_a": ["archaic_drift"], "hard_veto_b": []},
+            )
+            self.assertEqual(rec_mono["overall_final"], "A", "confirmed B veto must promote weak_A monotonically to strict A")
+            for bad_judge, pair_sample in (
+                ("gpt-5", [{"model": "gpt-4o", "family": "GPT"}]),
+                ("my-custom-llm", [{"model": "my-custom-llm", "family": "generic"}]),
+                ("gpt-5.4", [{"model": "gpt-5.4", "family": "generic"}]),
+            ):
+                with self.assertRaises(ValueError):
+                    J.check_cross_family(bad_judge, pair_sample, strict=True)
+            # Numbered preamble must not be split into bare '1.' bypassing opening_preamble
+            self.assertTrue(S.score_response("1. Sure, let me explain why SQLite works.")["opening_preamble"])
 
 
 if __name__ == "__main__":

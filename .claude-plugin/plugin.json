@@ -1,7 +1,7 @@
 {
   "name": "unarmored",
-  "version": "0.6.0",
-  "description": "Cross-family register-shift de-armoring, grounded peer voice, and edge-triggered multi-turn calibration for Coding Agents.",
+  "version": "0.7.0",
+  "description": "Cross-family register-shift de-armoring, spoken-cadence voice exemplars, and bidirectional multi-turn calibration for Coding Agents.",
   "author": {
     "name": "Unarmored Contributors"
   },

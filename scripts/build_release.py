@@ -75,6 +75,8 @@ SOURCE_TREE_EXTRA_PATHS = [
     "eval/conditions.py",
     "eval/score.py",
     "eval/run.py",
+    "eval/judge.py",
+    "eval/report.py",
     "eval/probe_prefix.py",
 ]
 

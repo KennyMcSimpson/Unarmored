@@ -57,6 +57,8 @@ class TestBuildRelease(unittest.TestCase):
             dest = Path(tmp) / "export"
             info = build_release.export_source_tree(REPO_ROOT, dest)
             self.assertTrue((dest / "tests" / "test_hook_engine.py").is_file())
+            self.assertTrue((dest / "eval" / "judge.py").is_file())
+            self.assertTrue((dest / "eval" / "report.py").is_file())
             self.assertTrue((dest / ".gitignore").is_file())
             self.assertFalse((dest / "packs").exists())
             exported = {p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file()}

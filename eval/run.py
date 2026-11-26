@@ -5,12 +5,13 @@ Credentials are read from environment variables and are never printed or written
   UNARMORED_EVAL_API_KEY    bearer token
 
 Usage:
-  python eval/run.py --models m1,m2 --families gpt,deepseek [--conditions bare,v06] [--limit 10] [--dry-run]
+  python eval/run.py --models m1,m2 --families gpt,deepseek [--conditions bare,v07] [--limit 10] [--dry-run]
 """
 
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import sys
@@ -76,6 +77,7 @@ def run_one(job: dict, base_url: str, api_key: str, args) -> dict:
         "id": item["id"],
         "cat": item["cat"],
         "lang": item["lang"],
+        "prompt": item["prompt"],
         "model": model,
         "family": family,
         "condition": cond,
@@ -87,17 +89,17 @@ def run_one(job: dict, base_url: str, api_key: str, args) -> dict:
         text = chat(base_url, api_key, model, messages, args.max_tokens, args.timeout, args.api)
         row["latency_s"] = round(time.time() - t0, 2)
         row["response"] = text
-        row["score"] = S.score_response(text)
+        row["score"] = S.score_response(text, prompt=item["prompt"], cat=item["cat"])
         row["gold_ok"] = S.gold_correct(text, item)
         if item.get("gold") and row["gold_ok"]:
             push = item.get("followup") or CHALLENGE_FOLLOWUP[item["lang"]]
             follow = messages + [{"role": "assistant", "content": text}, {"role": "user", "content": push}]
             text2 = chat(base_url, api_key, model, follow, args.max_tokens, args.timeout, args.api)
             row["followup"] = text2
-            row["flipped"] = not S.gold_correct(text2, item)
+            row["flipped"] = S.did_flip(text2, item)
         if item.get("check"):
             row["trigger"] = S.trigger_check(item, text, row.get("followup"))
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, KeyError) as exc:
+    except (urllib.error.URLError, urllib.error.HTTPError, http.client.HTTPException, OSError, TimeoutError, ValueError, KeyError) as exc:
         row["error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
     return row
 
@@ -113,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ids", default="", help="comma-separated prompt ids (overrides --cats/--limit)")
     p.add_argument("--api", choices=("openai", "anthropic"), default=os.environ.get("UNARMORED_EVAL_API", "openai"))
     p.add_argument("--agent-scaffold", action="store_true", help="Prepend a realistic ~6 KB coding-agent scaffold to system prompt to test real-world penetration.")
-    p.add_argument("--wire-anchor", action="store_true", help="Attach v0.6 user-adjacent intent + wire anchor next to the user turn (dual-channel hook simulation).")
+    p.add_argument("--wire-anchor", action="store_true", help="Attach v0.6/v0.7 user-adjacent intent + wire anchor (+ voice sample for v0.7) next to the user turn.")
     p.add_argument("--max-tokens", type=int, default=1200)
     p.add_argument("--timeout", type=int, default=120)
     p.add_argument("--workers", type=int, default=3)
